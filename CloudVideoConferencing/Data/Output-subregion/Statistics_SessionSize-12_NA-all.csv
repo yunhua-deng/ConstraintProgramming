@@ -1,0 +1,12 @@
+session_satisfaction_rate,0.665
+achieved_delay_bound_avg,239.007
+achieved_delay_bound_99th,317
+data_transfer_cost_avg,4.57652
+data_transfer_cost_99th,4.97987
+interDC_cost_ratio_avg,0.323704
+interDC_cost_ratio_99th,0.341041
+num_chosen_DCs_avg,11
+num_chosen_DCs_99th,11
+num_evaluated_solutions_avg,1
+num_evaluated_solutions_99th,1
+alg_running_time_avg,0.014
