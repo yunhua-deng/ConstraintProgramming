@@ -76,8 +76,6 @@ int main(int argc, char *argv[])
 	
 	for (auto session_size : { 8, 12, 16 })
 	{
-		//if (session_size > 12) session_count = 100;
-		
 		std::cout << " | session_size: " << session_size << "\n";
 		try
 		{
