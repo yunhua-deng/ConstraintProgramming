@@ -165,7 +165,7 @@ bool Simulation::EnforceNodeConsistency(vector<Client>& session_clients)
 		{
 			if (global.client_to_dc_delay_table.at(c.id).at(*it) > achieved_delay_bound) // unary constraint
 			{
-				it = c.dc_domain.erase(it); // remove this value and make 'it' point to the value following the removed one
+				it = c.dc_domain.erase(it); // remove this value ('it' will point to the value following the removed one)
 			}
 			else it++; // manually make 'it' point to the next value
 		}
@@ -195,7 +195,8 @@ bool Simulation::AC3Algorithm(vector<Client>& session_clients)
 		{
 			if (c_j.id != c_i.id)
 			{
-				worklist.push_back(pair<reference_wrapper<Client>, reference_wrapper<Client>>(c_i, c_j));				
+				/*using reference_wrapper such that the item being pushed to the vector is not a copy but a reference*/
+				worklist.push_back(pair<reference_wrapper<Client>, reference_wrapper<Client>>(c_i, c_j));
 			}
 		}
 	}
@@ -219,7 +220,7 @@ bool Simulation::AC3Algorithm(vector<Client>& session_clients)
 				return false;
 			}
 			
-			/*update worklist by adding every arc (c_k, c_i) (k != j and k != i)*/
+			/*update worklist by adding every arc (c_k, c_i) (k != j and k != i) which is pointing to c_i*/
 			for (auto& c_k : session_clients)
 			{
 				if ((c_k.id != c_j.get().id) && (c_k.id != c_i.get().id))
@@ -238,7 +239,7 @@ bool Simulation::AC3Algorithm(vector<Client>& session_clients)
 /*a untility function used by AC3Algorithm()*/
 bool Simulation::ArcReduce(Client& c_i, const Client& c_j)
 {	
-	bool domain_reduced = false; // check if there domain(c_i) is reduced
+	bool domain_reduced = false; // check if domain(c_i) is reduced at the end
 
 	/*find and remove bad values from domain(c_i)*/
 	for (auto d_i = c_i.dc_domain.begin(); d_i != c_i.dc_domain.end();)
@@ -256,7 +257,7 @@ bool Simulation::ArcReduce(Client& c_i, const Client& c_j)
 
 		if (true == to_be_removed)
 		{
-			d_i = c_i.dc_domain.erase(d_i); // remove this value and make 'd_i' point to the value following the removed one
+			d_i = c_i.dc_domain.erase(d_i); // remove this value ('d_i' will point to the value following the removed one)
 			domain_reduced = true;
 		}
 		else d_i++; // manually make d_i point to next value
@@ -281,10 +282,10 @@ bool Simulation::EnforceLocalConsistency(vector<Client>& session_clients)
 	return false;
 }
 
-/*a utility function to check if the assignment to client k is allowed (without using client's assigned_dc member)*/
-bool Simulation::IsAllowed(const vector<Client>& session_clients, const size_t k, const vector<ID>& session_assignment, const ID d_k, const size_t max_allowed_datacenters)
+/*a utility function to check if the assignment to client k is allowed by backward checking (not using client's assigned_dc member)*/
+bool Simulation::IsAllowedByBackwardChecking(const vector<Client>& session_clients, const size_t k, const vector<ID>& session_assignment, const ID d_k, const size_t max_allowed_datacenters)
 {
-	/*backward checking: check if this assignment for client k will violate some constraints between k and previously k - 1 assigned clients*/
+	/*Backward checking: check if this assignment for client k will violate some constraints between k and previously k - 1 assigned clients*/
 	for (size_t i = 0; i < k; i++)
 	{
 		/*if (global.path_length.at(Path(session_clients.at(k).id, d_k, session_assignment.at(i), session_clients.at(i).id)) > achieved_delay_bound ||
@@ -296,13 +297,22 @@ bool Simulation::IsAllowed(const vector<Client>& session_clients, const size_t k
 		}
 	}
 
-	/*backward checking: if this assignment for client k will violate the max_allowed_datacenters*/
+	/*Backward checking: if this assignment current client k will violate the max_allowed_datacenters*/
 	unordered_set<ID> chosen_dc_subset(session_assignment.begin(), session_assignment.begin() + k); // kth is excluded
 	chosen_dc_subset.insert(d_k);
 	if (chosen_dc_subset.size() > max_allowed_datacenters)
 	{
 		return false;
-	}
+	}	
+
+	/*otherwise, d_k is allowed*/
+	return true;
+}
+
+/*a utility function to check if the assignment to client k is allowed by forward checking (not using client's assigned_dc member)*/
+bool Simulation::IsAllowedByForwardChecking(const vector<Client>& session_clients, const size_t k, const vector<ID>& session_assignment, const ID d_k, const size_t max_allowed_datacenters)
+{
+	
 
 	/*otherwise, d_k is allowed*/
 	return true;
@@ -320,8 +330,8 @@ void Simulation::AssignClient(vector<Client>& session_clients, const size_t k, v
 			return; 
 		}
 
-		/*if allowed, extend*/
-		if (IsAllowed(session_clients, k, session_assignment, dc, max_allowed_datacenters))
+		/*if allowed, then extend*/
+		if (IsAllowedByBackwardChecking(session_clients, k, session_assignment, dc, max_allowed_datacenters))
 		{
 			session_assignment.at(k) = dc;
 
@@ -367,7 +377,7 @@ void Simulation::AssignClient_optimal(vector<Client>& session_clients, const siz
 {	
 	for (auto dc : session_clients.at(k).dc_domain)
 	{
-		if (IsAllowed(session_clients, k, session_assignment, dc, max_allowed_datacenters)) // pruning
+		if (IsAllowedByBackwardChecking(session_clients, k, session_assignment, dc, max_allowed_datacenters)) // pruning
 		{
 			if (IsWorthy(session_clients, k, session_assignment, dc, data_transfer_cost)) // bounding
 			{

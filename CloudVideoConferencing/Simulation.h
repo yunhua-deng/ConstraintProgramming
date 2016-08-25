@@ -136,7 +136,8 @@ private:
 	bool ArcReduce(Client&, const Client&);
 	
 	/*CP algorithms*/
-	bool IsAllowed(const vector<Client>&, const size_t, const vector<ID>&, const ID, const size_t);
+	bool IsAllowedByBackwardChecking(const vector<Client>&, const size_t, const vector<ID>&, const ID, const size_t);
+	bool IsAllowedByForwardChecking(const vector<Client>&, const size_t, const vector<ID>&, const ID, const size_t);
 	void AssignClient(vector<Client>&, const size_t, vector<ID>&, const size_t);
 	void CP(vector<Client>&, vector<ID>&, const size_t);
 	bool IsWorthy(const vector<Client>&, const size_t, vector<ID>&, const ID, const double);
@@ -156,8 +157,7 @@ private:
 	void GenerateOneSession(vector<ID>&);
 	void GenerateOneSessionWithTwoRegion(vector<ID>&);
 	void PrintGlobalInfo();
-	void PrintClientDomain(const Client&);
-	void PrintClientAssignment(const Client&);
+	void PrintClientDomain(const Client&);	
 	void FindNearestDC4Client(Client&, const vector<ID>&);	
 	void FindShortestPaths(vector<Client>&, const vector<ID>&);
 	void FindAllAndShortestPaths(vector<Client>&, const vector<ID>&);
