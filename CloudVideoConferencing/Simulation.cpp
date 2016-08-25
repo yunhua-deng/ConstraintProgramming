@@ -188,7 +188,7 @@ bool Simulation::ArcReduce(Client& c_i, const Client& c_j)
 {
 	bool domain_reduced = false; // check if domain(c_i) is reduced at the end
 
-								 /*find and remove bad values from domain(c_i)*/
+	/*find and remove bad values from domain(c_i)*/
 	for (auto d_i = c_i.dc_domain.begin(); d_i != c_i.dc_domain.end();)
 	{
 		bool to_be_removed = true; // check if d_i should be removed		
@@ -285,10 +285,10 @@ bool Simulation::EnforceLocalConsistency(vector<Client>& session_clients)
 	return false;
 }
 
-/*a utility function to check if the assignment to client k is allowed by backward checking (not using client's assigned_dc member)*/
-bool Simulation::IsAllowedByBackwardChecking(const vector<Client>& session_clients, const size_t k, const vector<ID>& client_assignment, const ID d_k, const size_t max_allowed_datacenters)
+/*a utility function to check if the assignment to client k is consistent with the previous assignments*/
+bool Simulation::IsConsistentWithPreviousAssignment(const vector<Client>& session_clients, const size_t k, const vector<ID>& client_assignment, const ID d_k, const size_t max_allowed_datacenters)
 {
-	/*Backward checking: check if this assignment for client k will violate some constraints between k and previously k - 1 assigned clients*/
+	/*check whether this assignment for client k will violate a constraint between k'th and one of the previous 0'th to (k - 1)'th clients*/
 	for (size_t i = 0; i < k; i++)
 	{
 		/*if (global.path_length.at(Path(session_clients.at(k).id, d_k, client_assignment.at(i), session_clients.at(i).id)) > achieved_delay_bound ||
@@ -298,77 +298,64 @@ bool Simulation::IsAllowedByBackwardChecking(const vector<Client>& session_clien
 		{
 			return false;
 		}
-	}
-
-	/*Backward checking: if this assignment current client k will violate the max_allowed_datacenters*/
-	unordered_set<ID> chosen_dc_subset(client_assignment.begin(), client_assignment.begin() + k); // kth is excluded
+	}	
+	
+	/*check the max_allowed_datacenters constraint*/
+	set<ID> chosen_dc_subset(client_assignment.begin(), client_assignment.begin() + k); // k'th not included
 	chosen_dc_subset.insert(d_k);
 	if (chosen_dc_subset.size() > max_allowed_datacenters)
 	{
 		return false;
-	}	
+	}
 
-	/*otherwise, d_k is allowed*/
+	/*consistent*/
 	return true;
 }
 
-/*a utility function to check if the assignment to client k is allowed by forward checking (not using client's assigned_dc member)*/
-bool Simulation::IsAllowedByForwardChecking(const vector<Client>& session_clients, const size_t k, const vector<ID>& client_assignment, const ID d_k, const size_t max_allowed_datacenters)
-{
-	
-
-	/*otherwise, d_k is allowed*/
-	return true;
-}
-
-/*a recursive function, work on each client at each call (for constraint satisfaction problem)*/
+/*a recursive function, assign one client in each call (for constraint satisfaction problem)*/
 void Simulation::AssignClient(vector<Client>& session_clients, const size_t k, vector<ID>& client_assignment, const size_t max_allowed_datacenters)
 {
-	/*iterating through client k's domain values one by one (branching)*/
+	/*go through every value in this variable's domain*/
 	for (auto dc : session_clients.at(k).dc_domain)
-	{
-		/*return early as we just need one solution to claim the feasibility*/
+	{		
 		if (num_evaluated_solutions > 0)
 		{
-			return; 
+			return; // return once finding a complete solution -> feasible
 		}
 
-		/*if allowed, then extend*/
-		if (IsAllowedByBackwardChecking(session_clients, k, client_assignment, dc, max_allowed_datacenters))
+		if (IsConsistentWithPreviousAssignment(session_clients, k, client_assignment, dc, max_allowed_datacenters))
 		{
-			client_assignment.at(k) = dc;
+			client_assignment.at(k) = dc; // assign dc to k'th client
 
-			if (k == (session_clients.size() - 1)) // all clients are assigned -> a full solution
+			if (k == (session_clients.size() - 1)) 
 			{
-				num_evaluated_solutions++; // count this solution
+				num_evaluated_solutions++; // found a complete solution and count it
 			}
-			else // if not a full solution then continue to work on the rest of clients
-			{
-				AssignClient(session_clients, k + 1, client_assignment, max_allowed_datacenters);
+			else 
+			{				
+				AssignClient(session_clients, k + 1, client_assignment, max_allowed_datacenters); // continue on extending the partial solution
 			}
 		}
 	}
 }
 
-/*a utility to be used by AssignClient_optimal for bounding*/
+/*a utility employed by AssignClient_optimal() for bounding*/
 bool Simulation::IsWorthy(const vector<Client>& session_clients, const size_t k, vector<ID>& client_assignment, const ID d_k, double data_transfer_cost)
 {
-	/*no need to care about the cost if no solutions have been found*/
-	if (0 == num_evaluated_solutions) // critical!!!
-		return true;
-	
-	/*construct a complete assignment*/
-	client_assignment.at(k) = d_k;
-	for (size_t i = k + 1; i < session_clients.size(); i++)
-	{
-		client_assignment.at(i) = session_clients.at(i).cheapest_dc;
-	}
+	/*no need to care about the cost if no solutions have been found (because data_transfer_cost has not been assigned yet!)*/
+	if (0 == num_evaluated_solutions)
+		return true; // of course, it is worthy becuase we haven't found any solution yet
 
 	/*compute the cost lower bound by ignoring the relay traffic cost*/
 	double cost_lower_bound = 0;
 	for (size_t i = 0; i < session_clients.size(); i++)
 	{
-		cost_lower_bound += session_clients.at(i).incoming_data_amount * global.datacenter.at(client_assignment.at(i)).external_bandwidth_price;
+		if (i < k) // previous 0'th to (k - 1)'th assigned clients
+			cost_lower_bound += session_clients.at(i).incoming_data_amount * global.datacenter.at(client_assignment.at(i)).external_bandwidth_price; // use client_assignment.at(i)
+		else if (k == i) // the k'th client
+			cost_lower_bound += cost_lower_bound += session_clients.at(i).incoming_data_amount * global.datacenter.at(d_k).external_bandwidth_price; // use d_k
+		else // future unassigned clients
+			cost_lower_bound += session_clients.at(i).incoming_data_amount * global.datacenter.at(session_clients.at(i).cheapest_dc).external_bandwidth_price; // use cheapest_dc
 	}
 
 	/*return the result*/
@@ -380,32 +367,32 @@ void Simulation::AssignClient_optimal(vector<Client>& session_clients, const siz
 {	
 	for (auto dc : session_clients.at(k).dc_domain)
 	{
-		if (IsAllowedByBackwardChecking(session_clients, k, client_assignment, dc, max_allowed_datacenters)) // pruning
+		if (IsConsistentWithPreviousAssignment(session_clients, k, client_assignment, dc, max_allowed_datacenters))
 		{
 			if (IsWorthy(session_clients, k, client_assignment, dc, data_transfer_cost)) // bounding
 			{
-				client_assignment.at(k) = dc;
+				client_assignment.at(k) = dc; // assignment for k'th variable
 
-				if (k == (session_clients.size() - 1)) // all clients are assigned -> a full solution
+				if (k == (session_clients.size() - 1)) // a complete solution
 				{
 					num_evaluated_solutions++; // count this solution
 
 					/*make sure they will only be initialized by the first solution*/
 					if (1 == num_evaluated_solutions)
 					{
-						data_transfer_cost = CalculateSessionCost(session_clients, client_assignment);
+						data_transfer_cost = CalculateAssignmentCost(session_clients, client_assignment);
 						optimal_client_assignment = client_assignment;
 					}
 
 					/*choose the assignment with lower cost*/
-					double this_cost = CalculateSessionCost(session_clients, client_assignment);
+					double this_cost = CalculateAssignmentCost(session_clients, client_assignment);
 					if (this_cost < data_transfer_cost)
 					{
 						data_transfer_cost = this_cost;
 						optimal_client_assignment = client_assignment;
 					}
 				}
-				else // if not a full solution then continue to work on the rest of clients
+				else // continue on extending the partial solution
 				{
 					AssignClient_optimal(session_clients, k + 1, client_assignment, max_allowed_datacenters, data_transfer_cost, optimal_client_assignment);
 				}
@@ -417,13 +404,13 @@ void Simulation::AssignClient_optimal(vector<Client>& session_clients, const siz
 		}
 		else
 		{
-			IsAllowed_false_counter++;
+			IsConsistentWithPreviousAssignment_false_counter++;
 		}
 	}
 }
 
 /*session cost calculation function based on global*/
-double Simulation::CalculateSessionCost(const vector<Client>& session_clients, const vector<ID>& client_assignment)
+double Simulation::CalculateAssignmentCost(const vector<Client>& session_clients, const vector<ID>& client_assignment)
 {
 	/*create some stuff to facilitate the cost calculation*/
 	unordered_map<ID, vector<ID>> assigned_clients_to_dc;
@@ -989,7 +976,7 @@ void Simulation::CP_optimal(vector<Client>& session_clients, vector<ID>& client_
 	double data_transfer_cost;
 	vector<ID> optimal_client_assignment;
 	IsWorthy_false_counter = 0;
-	IsAllowed_false_counter = 0;
+	IsConsistentWithPreviousAssignment_false_counter = 0;
 	num_evaluated_solutions = 0; // important
 	AssignClient_optimal(session_clients, 0, client_assignment, max_allowed_datacenters, data_transfer_cost, optimal_client_assignment);
 
@@ -1064,10 +1051,15 @@ void Simulation::Alg_CP(const size_t max_allowed_datacenters, const bool need_op
 		while (true)
 		{
 			num_evaluated_solutions = 0; // initialize
-			CP(session_clients, client_assignment, max_allowed_datacenters);
-			
-			if (num_evaluated_solutions > 0) break; // break the loop since we find the valid achieved_delay_bound
-			else achieved_delay_bound += global.sim_setting.bound_increment_stepsize; //increase the delay bound
+			CP(session_clients, client_assignment, max_allowed_datacenters);			
+			if (num_evaluated_solutions > 0) 
+			{
+				break; // break the loop since we find the valid achieved_delay_bound
+			}
+			else 
+			{ 
+				achieved_delay_bound += global.sim_setting.bound_increment_stepsize; //increase the delay bound
+			} 
 		}
 					
 		/*****************************************************************************/
@@ -1078,7 +1070,7 @@ void Simulation::Alg_CP(const size_t max_allowed_datacenters, const bool need_op
 
 		/*record performance metrics for this session*/
 		achieved_delay_bound_all_sessions.push_back(achieved_delay_bound);		
-		data_transfer_cost_all_sessions.push_back(CalculateSessionCost(session_clients, client_assignment));
+		data_transfer_cost_all_sessions.push_back(CalculateAssignmentCost(session_clients, client_assignment));
 		interDC_cost_ratio_all_sessions.push_back(interDC_cost_ratio);
 		num_of_chosen_DCs_all_sessions.push_back(num_of_chosen_DCs);
 		num_evaluated_solutions_all_sessions.push_back(num_evaluated_solutions);
@@ -1209,7 +1201,7 @@ void Simulation::Alg_NA_all()
 		
 		/*record performance metrics for this session*/		
 		achieved_delay_bound_all_sessions.push_back(achieved_delay_bound);
-		data_transfer_cost_all_sessions.push_back(CalculateSessionCost(session_clients, client_assignment));
+		data_transfer_cost_all_sessions.push_back(CalculateAssignmentCost(session_clients, client_assignment));
 		interDC_cost_ratio_all_sessions.push_back(interDC_cost_ratio);
 		num_of_chosen_DCs_all_sessions.push_back(num_of_chosen_DCs);
 		num_evaluated_solutions_all_sessions.push_back(num_evaluated_solutions);
@@ -1293,12 +1285,12 @@ void Simulation::NA_sub_optimal(vector<Client>& session_clients, vector<ID>& cli
 			/*ensure it will only be initialized by the first valid solution*/
 			if (1 == num_evaluated_solutions)
 			{
-				data_transfer_cost = CalculateSessionCost(session_clients, client_assignment);
+				data_transfer_cost = CalculateAssignmentCost(session_clients, client_assignment);
 				optimal_client_assignment = client_assignment;
 			}
 
 			/*choose the assignment with lower cost*/
-			double this_cost = CalculateSessionCost(session_clients, client_assignment);
+			double this_cost = CalculateAssignmentCost(session_clients, client_assignment);
 			if (this_cost < data_transfer_cost)
 			{
 				optimal_client_assignment = client_assignment;
@@ -1413,7 +1405,7 @@ void Simulation::Alg_NA_sub()
 		
 		/*record performance metrics for this session*/
 		achieved_delay_bound_all_sessions.push_back(achieved_delay_bound);
-		data_transfer_cost_all_sessions.push_back(CalculateSessionCost(session_clients, client_assignment));
+		data_transfer_cost_all_sessions.push_back(CalculateAssignmentCost(session_clients, client_assignment));
 		interDC_cost_ratio_all_sessions.push_back(interDC_cost_ratio);
 		num_of_chosen_DCs_all_sessions.push_back(num_of_chosen_DCs);
 		num_evaluated_solutions_all_sessions.push_back(num_evaluated_solutions);

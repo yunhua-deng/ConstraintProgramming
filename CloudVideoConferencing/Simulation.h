@@ -42,7 +42,7 @@ struct Client
 	map<ID, vector<Path>> path_to_client; // memory-intensive (not applicable to large input size)
 	map<ID, Path> shortest_path_to_client;
 
-	list<ID> dc_domain; // using list (rather than vector) for efficient deletion of elements in the middle
+	list<ID> dc_domain; // using list (rather than vector) for efficient deletion of elements in the middle in constraint propogation
 	ID cheapest_dc;
 
 	ID assigned_dc;
@@ -125,7 +125,7 @@ public:
 	void CheckInterDatacenterLink();
 
 private:
-	void Alg_CP(const size_t, const bool);
+	void Alg_CP(const size_t max_allowed_datacenters, const bool need_optimal_solution = true);
 	void Alg_NA_all();
 	void Alg_NA_sub();
 	
@@ -134,25 +134,24 @@ private:
 	bool EnforceNodeConsistency(vector<Client>&);
 	bool AC3Algorithm(vector<Client>&);
 	bool ArcReduce(Client&, const Client&);
-	
-	/*CP algorithms*/
-	bool IsAllowedByBackwardChecking(const vector<Client>&, const size_t, const vector<ID>&, const ID, const size_t);
-	bool IsAllowedByForwardChecking(const vector<Client>&, const size_t, const vector<ID>&, const ID, const size_t);
-	void AssignClient(vector<Client>&, const size_t, vector<ID>&, const size_t);
-	void CP(vector<Client>&, vector<ID>&, const size_t);
+	bool IsConsistentWithPreviousAssignment(const vector<Client>&, const size_t, const vector<ID>&, const ID, const size_t);
 	bool IsWorthy(const vector<Client>&, const size_t, vector<ID>&, const ID, const double);
-	void AssignClient_optimal(vector<Client>&, const size_t, vector<ID>&, const size_t, double&, vector<ID>&);
-	void CP_optimal(vector<Client>&, vector<ID>&, const size_t);
-	double IsAllowed_false_counter;
+	double IsConsistentWithPreviousAssignment_false_counter;
 	double IsWorthy_false_counter;
+	
+	/*CP algorithms*/	
+	void AssignClient(vector<Client>&, const size_t, vector<ID>&, const size_t);
+	void CP(vector<Client>&, vector<ID>&, const size_t);	
+	void AssignClient_optimal(vector<Client>&, const size_t, vector<ID>&, const size_t, double&, vector<ID>&);
+	void CP_optimal(vector<Client>&, vector<ID>&, const size_t);	
 
-	/*alternative algorithms*/
-	bool IsValidAssignment(const vector<Client>&, const vector<ID>&);
+	/*other algorithms*/	
 	void NA_all(vector<Client>&, vector<ID>&);
 	void NA_sub(vector<Client>&, vector<ID>&);
 	void NA_sub_optimal(vector<Client>&, vector<ID>&);
+	bool IsValidAssignment(const vector<Client>&, const vector<ID>&); // not used by CP
 
-	/*some utility functions*/
+	/*some utility functions*/	
 	double CalculatePathLength(Path&);
 	void GenerateOneSession(vector<ID>&);
 	void GenerateOneSessionWithTwoRegion(vector<ID>&);
@@ -161,7 +160,7 @@ private:
 	void FindNearestDC4Client(Client&, const vector<ID>&);	
 	void FindShortestPaths(vector<Client>&, const vector<ID>&);
 	void FindAllAndShortestPaths(vector<Client>&, const vector<ID>&);
-	double CalculateSessionCost(const vector<Client>&, const vector<ID>&);
+	double CalculateAssignmentCost(const vector<Client>&, const vector<ID>&);
 	void OutputPerformanceData();
 	void OutputAssignmentOfOneSession(const int, const vector<Client>&);
 	void ResetPerformanceDataStorage();
