@@ -88,11 +88,11 @@ int main(int argc, char *argv[])
 			sim.data_directory = ".\\Data\\";
 			sim.client_dc_latency_file = "ping_to_prefix_median_matrix.csv";
 			sim.output_directory = sim.data_directory + "Output\\";
-			sim.cluster_by_subregion = true;
+			sim.cluster_by_subregion = false;
 			sim.output_assignment = false;
 
 			sim.Initialize();			
-			for (auto alg : { "CP-1", "CP-2", "CP-3", "CP-4", "CP", "NA-all", "NA-sub" })
+			for (auto alg : { "CP-1", "CP-2", "CP-3", "CP-4", "CP-5", "NA-all", "NA-sub" })
 			{
 				std::cout << " | | alg_name: " << alg << "\n";
 				
