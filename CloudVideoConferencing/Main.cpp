@@ -67,14 +67,14 @@ int main(int argc, char *argv[])
 	double recommended_delay_bound = 150;
 	double maximum_allowed_delay_bound = 250;
 	double bound_increment_stepsize = 1;
-	double session_count = 1000;
+	double session_count = 100;
 	std::cout << "common_settings\n";
 	std::cout << " | recommended_delay_bound: " << recommended_delay_bound << "\n";
 	std::cout << " | max_allowed_delay_bound: " << maximum_allowed_delay_bound << "\n";
 	std::cout << " | bound_increment_stepsize: " << bound_increment_stepsize << "\n";
 	std::cout << " | session_count: " << session_count << "\n";
 	
-	for (auto session_size : { 8, 12, 16 })
+	for (auto session_size : { 12 })
 	{
 		std::cout << " | session_size: " << session_size << "\n";
 		try
@@ -88,11 +88,11 @@ int main(int argc, char *argv[])
 			sim.data_directory = ".\\Data\\";
 			sim.client_dc_latency_file = "ping_to_prefix_median_matrix.csv";
 			sim.output_directory = sim.data_directory + "Output\\";
-			sim.cluster_by_subregion = false;
+			sim.cluster_by_subregion = true;
 			sim.output_assignment = false;
 
 			sim.Initialize();			
-			for (auto alg : { "CP-1", "CP-2", "CP-3", "CP-4", "CP-4-fast", "NA-all", "NA-sub" })
+			for (auto alg : { "CP-1", "CP-2", "CP-3", "CP-4", "CP", "NA-all", "NA-sub" })
 			{
 				std::cout << " | | alg_name: " << alg << "\n";
 				

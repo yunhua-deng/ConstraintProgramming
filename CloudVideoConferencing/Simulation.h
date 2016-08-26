@@ -125,7 +125,7 @@ public:
 	void CheckInterDatacenterLink();
 
 private:
-	void Alg_CP(const size_t max_allowed_datacenters, const bool need_optimal_solution = true);
+	void Alg_CP(const size_t max_allowed_datacenters = 100, const bool need_optimal_solution = true);
 	void Alg_NA_all();
 	void Alg_NA_sub();
 	
@@ -134,9 +134,9 @@ private:
 	bool EnforceNodeConsistency(vector<Client>&);
 	bool AC3Algorithm(vector<Client>&);
 	bool ArcReduce(Client&, const Client&);
-	bool IsConsistentWithPreviousAssignment(const vector<Client>&, const size_t, const vector<ID>&, const ID, const size_t);
-	bool IsWorthy(const vector<Client>&, const size_t, vector<ID>&, const ID, const double);
-	double IsConsistentWithPreviousAssignment_false_counter;
+	bool IsConsistentWithPreviousAssignments(const vector<Client>&, const size_t, const vector<ID>&, const ID, const size_t);
+	bool IsWorthy(const vector<Client>&, const size_t, vector<ID>&, const ID, const double); // bounding
+	double IsConsistentWithPreviousAssignments_false_counter;
 	double IsWorthy_false_counter;
 	
 	/*CP algorithms*/	

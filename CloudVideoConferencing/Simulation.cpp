@@ -241,7 +241,7 @@ bool Simulation::AC3Algorithm(vector<Client>& session_clients)
 		auto arc = worklist.back();
 		worklist.pop_back();
 
-		/*work on it by applying ArcReduce()*/
+		/*work on this arc by applying ArcReduce()*/
 		auto c_i = arc.first;
 		auto c_j = arc.second;
 		if (ArcReduce(c_i, c_j))
@@ -286,7 +286,7 @@ bool Simulation::EnforceLocalConsistency(vector<Client>& session_clients)
 }
 
 /*a utility function to check if the assignment to client k is consistent with the previous assignments*/
-bool Simulation::IsConsistentWithPreviousAssignment(const vector<Client>& session_clients, const size_t k, const vector<ID>& client_assignment, const ID d_k, const size_t max_allowed_datacenters)
+bool Simulation::IsConsistentWithPreviousAssignments(const vector<Client>& session_clients, const size_t k, const vector<ID>& client_assignment, const ID d_k, const size_t max_allowed_datacenters)
 {
 	/*check whether this assignment for client k will violate a constraint between k'th and one of the previous 0'th to (k - 1)'th clients*/
 	for (size_t i = 0; i < k; i++)
@@ -323,7 +323,7 @@ void Simulation::AssignClient(vector<Client>& session_clients, const size_t k, v
 			return; // return once finding a complete solution -> feasible
 		}
 
-		if (IsConsistentWithPreviousAssignment(session_clients, k, client_assignment, dc, max_allowed_datacenters))
+		if (IsConsistentWithPreviousAssignments(session_clients, k, client_assignment, dc, max_allowed_datacenters))
 		{
 			client_assignment.at(k) = dc; // assign dc to k'th client
 
@@ -351,14 +351,18 @@ bool Simulation::IsWorthy(const vector<Client>& session_clients, const size_t k,
 	for (size_t i = 0; i < session_clients.size(); i++)
 	{
 		if (i < k) // previous 0'th to (k - 1)'th assigned clients
+		{
 			cost_lower_bound += session_clients.at(i).incoming_data_amount * global.datacenter.at(client_assignment.at(i)).external_bandwidth_price; // use client_assignment.at(i)
+		}
 		else if (k == i) // the k'th client
-			cost_lower_bound += cost_lower_bound += session_clients.at(i).incoming_data_amount * global.datacenter.at(d_k).external_bandwidth_price; // use d_k
+		{
+			cost_lower_bound += session_clients.at(i).incoming_data_amount * global.datacenter.at(d_k).external_bandwidth_price; // use d_k
+		}
 		else // future unassigned clients
+		{
 			cost_lower_bound += session_clients.at(i).incoming_data_amount * global.datacenter.at(session_clients.at(i).cheapest_dc).external_bandwidth_price; // use cheapest_dc
-	}
-
-	/*return the result*/
+		}
+	}	
 	return (cost_lower_bound < data_transfer_cost);
 }
 
@@ -367,9 +371,9 @@ void Simulation::AssignClient_optimal(vector<Client>& session_clients, const siz
 {	
 	for (auto dc : session_clients.at(k).dc_domain)
 	{
-		if (IsConsistentWithPreviousAssignment(session_clients, k, client_assignment, dc, max_allowed_datacenters))
+		if (IsConsistentWithPreviousAssignments(session_clients, k, client_assignment, dc, max_allowed_datacenters))
 		{
-			if (IsWorthy(session_clients, k, client_assignment, dc, data_transfer_cost)) // bounding
+			if (IsWorthy(session_clients, k, client_assignment, dc, data_transfer_cost))
 			{
 				client_assignment.at(k) = dc; // assignment for k'th variable
 
@@ -404,7 +408,7 @@ void Simulation::AssignClient_optimal(vector<Client>& session_clients, const siz
 		}
 		else
 		{
-			IsConsistentWithPreviousAssignment_false_counter++;
+			IsConsistentWithPreviousAssignments_false_counter++;
 		}
 	}
 }
@@ -920,12 +924,13 @@ void Simulation::OutputPerformanceData()
 }
 
 void Simulation::Run()
-{		
-	if ("CP-1" == algorithm_to_run) Alg_CP(1, true);
-	else if ("CP-2" == algorithm_to_run) Alg_CP(2, true);
-	else if ("CP-3" == algorithm_to_run) Alg_CP(3, true);
-	else if ("CP-4" == algorithm_to_run) Alg_CP(4, true);
-	else if ("CP-4-fast" == algorithm_to_run) Alg_CP(4, false);
+{	
+	if ("CP" == algorithm_to_run) Alg_CP();
+	else if ("CP-1" == algorithm_to_run) Alg_CP(1);
+	else if ("CP-2" == algorithm_to_run) Alg_CP(2);
+	else if ("CP-3" == algorithm_to_run) Alg_CP(3);
+	else if ("CP-4" == algorithm_to_run) Alg_CP(4);
+	else if ("CP-5" == algorithm_to_run) Alg_CP(5);
 	else if ("NA-all" == algorithm_to_run) Alg_NA_all();
 	else if ("NA-sub" == algorithm_to_run) Alg_NA_sub();
 	else 
@@ -949,10 +954,10 @@ void Simulation::CP(vector<Client>& session_clients, vector<ID>& client_assignme
 	}
 
 	/*check if achieved_delay_bound is valid*/	
-	if (EnforceLocalConsistency(session_clients))
+	if (EnforceLocalConsistency(session_clients)) // each client's dc_domain will be modified (reduced)
 	{		
 		std::sort(session_clients.begin(), session_clients.end(), ClientComparator_ByDomainSize); // sorting can improve the efficiency substantially
-		AssignClient(session_clients, 0, client_assignment, max_allowed_datacenters); // begin with the first client (i.e., the 0th client)
+		AssignClient(session_clients, 0, client_assignment, max_allowed_datacenters); // begin with the first client (i.e., the 0'th client)
 	}
 }
 
@@ -976,7 +981,7 @@ void Simulation::CP_optimal(vector<Client>& session_clients, vector<ID>& client_
 	double data_transfer_cost;
 	vector<ID> optimal_client_assignment;
 	IsWorthy_false_counter = 0;
-	IsConsistentWithPreviousAssignment_false_counter = 0;
+	IsConsistentWithPreviousAssignments_false_counter = 0;
 	num_evaluated_solutions = 0; // important
 	AssignClient_optimal(session_clients, 0, client_assignment, max_allowed_datacenters, data_transfer_cost, optimal_client_assignment);
 
@@ -1052,14 +1057,10 @@ void Simulation::Alg_CP(const size_t max_allowed_datacenters, const bool need_op
 		{
 			num_evaluated_solutions = 0; // initialize
 			CP(session_clients, client_assignment, max_allowed_datacenters);			
-			if (num_evaluated_solutions > 0) 
-			{
+			if (num_evaluated_solutions > 0)
 				break; // break the loop since we find the valid achieved_delay_bound
-			}
-			else 
-			{ 
+			else
 				achieved_delay_bound += global.sim_setting.bound_increment_stepsize; //increase the delay bound
-			} 
 		}
 					
 		/*****************************************************************************/

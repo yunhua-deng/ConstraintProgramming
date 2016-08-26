@@ -16,7 +16,7 @@ from collections import OrderedDict
 session_size_list = ['8', '12', '16']
 session_count_list = ['1000', '1000', '100']
 
-alg_name_list = ['CP-1', 'CP-2', 'CP-3', 'CP-4', 'CP-4-fast', 'NA-all', 'NA-sub']
+alg_name_list = ['CP-1', 'CP-2', 'CP-3', 'CP-4', 'CP', 'NA-all', 'NA-sub']
 dc_list = ['ec2-ap-northeast-1', 'ec2-ap-northeast-2', 'ec2-ap-south-1', 'ec2-ap-southeast-1', 'ec2-ap-southeast-2', 'ec2-eu-central-1', 'ec2-eu-west-1', 'ec2-sa-east-1', 'ec2-us-east-1', 'ec2-us-west-1', 'ec2-us-west-2']
 file_name_list = os.listdir()
 
