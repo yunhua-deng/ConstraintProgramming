@@ -64,13 +64,13 @@
 argv[]: array of command-line argument strings (start from 1 because 0 is the function itself)*/
 int main(int argc, char *argv[])
 {	
-	double recommended_delay_bound = 150;
-	double maximum_allowed_delay_bound = 250;
+	/*double recommended_delay_bound = 150;
+	double maximum_allowed_delay_bound = 300;*/
 	double bound_increment_stepsize = 1;
-	double session_count = 100;
+	double session_count = 1000;
 	std::cout << "common_settings\n";
-	std::cout << " | recommended_delay_bound: " << recommended_delay_bound << "\n";
-	std::cout << " | max_allowed_delay_bound: " << maximum_allowed_delay_bound << "\n";
+	/*std::cout << " | recommended_delay_bound: " << recommended_delay_bound << "\n";
+	std::cout << " | max_allowed_delay_bound: " << maximum_allowed_delay_bound << "\n";*/
 	std::cout << " | bound_increment_stepsize: " << bound_increment_stepsize << "\n";
 	std::cout << " | session_count: " << session_count << "\n";
 	
@@ -79,24 +79,23 @@ int main(int argc, char *argv[])
 		std::cout << " | session_size: " << session_size << "\n";
 		try
 		{
-			if (recommended_delay_bound < 1 || session_size < 2 || session_count < 1)
+			if (/*recommended_delay_bound < 1 || */session_size < 2 || session_count < 1)
 			{
 				throw "bad simulation parameters\n";
 			}
 						
-			Simulation sim = Simulation(Setting(recommended_delay_bound, maximum_allowed_delay_bound, session_size, bound_increment_stepsize, session_count));
+			Simulation sim = Simulation(Setting(session_size, bound_increment_stepsize, session_count));
 			sim.data_directory = ".\\Data\\";
 			sim.client_dc_latency_file = "ping_to_prefix_median_matrix.csv";
 			sim.output_directory = sim.data_directory + "Output\\";
-			sim.cluster_by_subregion = false;
+			sim.cluster_by_subregion = true;
 			sim.output_assignment = false;
 
 			sim.Initialize();			
-			for (auto alg : { "CP-1", "CP-2", "CP-3", "CP-4", "CP-5", "NA-all", "NA-sub" })
+			for (auto alg_name : { "CP-1", "CP-2", "CP-3", "CP-4", "CP-5", "NA-all", "NA-sub"})
 			{
-				std::cout << " | | alg_name: " << alg << "\n";
-				
-				sim.algorithm_to_run = alg;
+				sim.alg_to_run = alg_name;
+				std::cout << " | | alg_name: " << sim.alg_to_run << "\n";
 				sim.Run();
 			}
 		}

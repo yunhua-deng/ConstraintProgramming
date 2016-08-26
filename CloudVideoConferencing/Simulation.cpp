@@ -163,7 +163,7 @@ bool Simulation::EnforceNodeConsistency(vector<Client>& session_clients)
 		/*find bad values and remove them from the domain*/
 		for (auto it = c.dc_domain.begin(); it != c.dc_domain.end();)
 		{
-			if (global.client_to_dc_delay_table.at(c.id).at(*it) > achieved_delay_bound) // unary constraint
+			if (global.client_to_dc_delay_table.at(c.id).at(*it) > achievable_delay_bound) // unary constraint
 			{
 				it = c.dc_domain.erase(it); // remove this value ('it' will point to the value following the removed one)
 			}
@@ -194,8 +194,8 @@ bool Simulation::ArcReduce(Client& c_i, const Client& c_j)
 		bool to_be_removed = true; // check if d_i should be removed		
 		for (auto& d_j : c_j.dc_domain)
 		{
-			//if (global.path_length.at(Path(c_i.id, *d_i, d_j, c_j.id)) <= achieved_delay_bound) // binary constraint
-			if (CalculatePathLength(Path(c_i.id, *d_i, d_j, c_j.id)) <= achieved_delay_bound) // binary constraint
+			//if (global.path_length.at(Path(c_i.id, *d_i, d_j, c_j.id)) <= achievable_delay_bound) // binary constraint
+			if (CalculatePathLength(Path(c_i.id, *d_i, d_j, c_j.id)) <= achievable_delay_bound) // binary constraint
 			{
 				to_be_removed = false; // no need to remove d_i in c_i's domain because we can find a consistent value d_j in c_j's domain
 				break;
@@ -291,10 +291,10 @@ bool Simulation::IsConsistentWithPreviousAssignments(const vector<Client>& sessi
 	/*check whether this assignment for client k will violate a constraint between k'th and one of the previous 0'th to (k - 1)'th clients*/
 	for (size_t i = 0; i < k; i++)
 	{
-		/*if (global.path_length.at(Path(session_clients.at(k).id, d_k, client_assignment.at(i), session_clients.at(i).id)) > achieved_delay_bound ||
-			global.path_length.at(Path(session_clients.at(i).id, client_assignment.at(i), d_k, session_clients.at(k).id)) > achieved_delay_bound)*/
-		if (CalculatePathLength(Path(session_clients.at(k).id, d_k, client_assignment.at(i), session_clients.at(i).id)) > achieved_delay_bound ||
-			CalculatePathLength(Path(session_clients.at(i).id, client_assignment.at(i), d_k, session_clients.at(k).id)) > achieved_delay_bound)
+		/*if (global.path_length.at(Path(session_clients.at(k).id, d_k, client_assignment.at(i), session_clients.at(i).id)) > achievable_delay_bound ||
+			global.path_length.at(Path(session_clients.at(i).id, client_assignment.at(i), d_k, session_clients.at(k).id)) > achievable_delay_bound)*/
+		if (CalculatePathLength(Path(session_clients.at(k).id, d_k, client_assignment.at(i), session_clients.at(i).id)) > achievable_delay_bound ||
+			CalculatePathLength(Path(session_clients.at(i).id, client_assignment.at(i), d_k, session_clients.at(k).id)) > achievable_delay_bound)
 		{
 			return false;
 		}
@@ -629,13 +629,17 @@ void Simulation::Initialize()
 		auto pos = global.datacenter.at(c.nearest_dc).name.find_first_of("-");
 		c.region = global.datacenter.at(c.nearest_dc).name.substr(pos + 1, 2); // e.g. extract "ap" from "ec2-ap-northeast-1"
 		
-		if (cluster_by_subregion) global.client_cluster[c.subregion].push_back(c.id);
-		else global.client_cluster[c.region].push_back(c.id);
+		/*create clusters*/
+		if (cluster_by_subregion) 
+			if ("ec2-sa-east-1" != c.region) global.client_cluster[c.subregion].push_back(c.id);
+		else 
+			if ("sa" != c.region) global.client_cluster[c.region].push_back(c.id);
 		
+		/*record this client*/
 		global.client[c.id] = c;
 	}
 
-	// dump client cluster to .csv	
+	// dump client cluster to disk	
 	_mkdir(output_directory.c_str()); // because _mkdir() only accepts const char*
 	string cluster_file_name = output_directory + "client_cluster.txt";
 	ofstream cluster_file(cluster_file_name);
@@ -674,7 +678,7 @@ void Simulation::Initialize()
 	GenerateAllSubsets(global.dc_id_list, x, 0, all_dc_subsets);
 	std::sort(all_dc_subsets.begin(), all_dc_subsets.end(), SubsetComparatorBySize);
 
-	/*compute path_length, it is memory-intensive: not applicable for large input sizes (e.g., > 1000 candidate clients)*/
+	/*pre-compute path_length, it is memory-intensive: not applicable for large input sizes (e.g., > 1000 candidate clients)*/
 	/*Path one_path;
 	for (auto s : global.client_id_list)
 	{
@@ -835,7 +839,7 @@ void Simulation::OutputAssignmentOfOneSession(const int session_id, const vector
 
 	auto assignment_directory = output_directory + "Assignment\\";
 	_mkdir(assignment_directory.c_str());
-	string data_file_name = assignment_directory + "SessionSize-" + std::to_string((int)global.sim_setting.session_size) + "_SessionID-" + std::to_string(session_id) + "_" + algorithm_to_run + ".csv";
+	string data_file_name = assignment_directory + "SessionSize-" + std::to_string((int)global.sim_setting.session_size) + "_SessionID-" + std::to_string(session_id) + "_" + alg_to_run + ".csv";
 	ofstream data_file(data_file_name);
 	if (data_file.is_open())
 	{
@@ -858,9 +862,9 @@ void Simulation::OutputAssignmentOfOneSession(const int session_id, const vector
 void Simulation::OutputPerformanceData()
 {	
 	/*display all statistics to console*/
-	std::cout << " | | | session_satisfaction_rate:\t" << (1.0 - GetRatioOfGreaterThan(achieved_delay_bound_all_sessions, global.sim_setting.maximum_allowed_delay_bound)) << "\n";
-	std::cout << " | | | achieved_delay_bound_avg:\t" << GetMeanValue(achieved_delay_bound_all_sessions) << "\n";
-	std::cout << " | | | achieved_delay_bound_99th:\t" << GetPercentile(achieved_delay_bound_all_sessions, 99) << "\n";
+	/*std::cout << " | | | session_satisfaction_rate:\t" << (1.0 - GetRatioOfGreaterThan(achievable_delay_bound_all_sessions, global.sim_setting.maximum_allowed_delay_bound)) << "\n";*/
+	std::cout << " | | | achievable_delay_bound_avg:\t" << GetMeanValue(achievable_delay_bound_all_sessions) << "\n";
+	std::cout << " | | | achievable_delay_bound_99th:\t" << GetPercentile(achievable_delay_bound_all_sessions, 99) << "\n";
 	std::cout << " | | | data_transfer_cost_avg:\t" << GetMeanValue(data_transfer_cost_all_sessions) << "\n";
 	std::cout << " | | | data_transfer_cost_99th:\t" << GetPercentile(data_transfer_cost_all_sessions, 99) << "\n";
 	std::cout << " | | | interDC_cost_ratio_avg:\t" << GetMeanValue(interDC_cost_ratio_all_sessions) << "\n";
@@ -872,13 +876,13 @@ void Simulation::OutputPerformanceData()
 	std::cout << " | | | alg_running_time_avg:\t" << GetMeanValue(alg_running_time_all_sessions) << "\n";
 	
 	/*dump all statistics to disk*/
-	auto data_file_name = output_directory + "Statistics_" + "SessionSize-" + std::to_string((int)global.sim_setting.session_size) + "_" + algorithm_to_run + ".csv";
+	auto data_file_name = output_directory + "Statistics_" + "SessionSize-" + std::to_string((int)global.sim_setting.session_size) + "_" + alg_to_run + ".csv";
 	ofstream data_file(data_file_name);
 	if (data_file.is_open())
 	{
-		data_file << "session_satisfaction_rate," << (1.0 - GetRatioOfGreaterThan(achieved_delay_bound_all_sessions, global.sim_setting.maximum_allowed_delay_bound)) << "\n";
-		data_file << "achieved_delay_bound_avg," << GetMeanValue(achieved_delay_bound_all_sessions) << "\n";
-		data_file << "achieved_delay_bound_99th," << GetPercentile(achieved_delay_bound_all_sessions, 99) << "\n";
+		/*data_file << "session_satisfaction_rate," << (1.0 - GetRatioOfGreaterThan(achievable_delay_bound_all_sessions, global.sim_setting.maximum_allowed_delay_bound)) << "\n";*/
+		data_file << "achievable_delay_bound_avg," << GetMeanValue(achievable_delay_bound_all_sessions) << "\n";
+		data_file << "achievable_delay_bound_99th," << GetPercentile(achievable_delay_bound_all_sessions, 99) << "\n";
 		data_file << "data_transfer_cost_avg," << GetMeanValue(data_transfer_cost_all_sessions) << "\n";
 		data_file << "data_transfer_cost_99th," << GetPercentile(data_transfer_cost_all_sessions, 99) << "\n";
 		data_file << "interDC_cost_ratio_avg," << GetMeanValue(interDC_cost_ratio_all_sessions) << "\n";
@@ -898,16 +902,16 @@ void Simulation::OutputPerformanceData()
 	}
 
 	/*dump all details to disk*/
-	data_file_name = output_directory + "Details_" + "SessionSize-" + std::to_string((int)global.sim_setting.session_size) + "_" + algorithm_to_run + ".csv";
+	data_file_name = output_directory + "Details_" + "SessionSize-" + std::to_string((int)global.sim_setting.session_size) + "_" + alg_to_run + ".csv";
 	data_file.open(data_file_name);
 	if (data_file.is_open())
 	{
-		data_file << "session_id,achieved_delay_bound,data_transfer_cost,interDC_cost_ratio,num_chosen_DCs,alg_running_time";
+		data_file << "session_id,achievable_delay_bound,data_transfer_cost,interDC_cost_ratio,num_chosen_DCs,alg_running_time";
 		data_file << "\n";
 		for (int i = 0; i < global.sim_setting.session_count; i++)
 		{			
 			data_file << (i + 1) << ",";
-			data_file << achieved_delay_bound_all_sessions.at(i) << ",";
+			data_file << achievable_delay_bound_all_sessions.at(i) << ",";
 			data_file << data_transfer_cost_all_sessions.at(i) << ",";
 			data_file << interDC_cost_ratio_all_sessions.at(i) << ",";
 			data_file << num_of_chosen_DCs_all_sessions.at(i) << ",";
@@ -924,20 +928,204 @@ void Simulation::OutputPerformanceData()
 }
 
 void Simulation::Run()
-{	
-	if ("CP" == algorithm_to_run) Alg_CP();
-	else if ("CP-1" == algorithm_to_run) Alg_CP(1);
-	else if ("CP-2" == algorithm_to_run) Alg_CP(2);
-	else if ("CP-3" == algorithm_to_run) Alg_CP(3);
-	else if ("CP-4" == algorithm_to_run) Alg_CP(4);
-	else if ("CP-5" == algorithm_to_run) Alg_CP(5);
-	else if ("NA-all" == algorithm_to_run) Alg_NA_all();
-	else if ("NA-sub" == algorithm_to_run) Alg_NA_sub();
-	else 
+{
+	/*reset those performance stuff for this algorithm*/
+	ResetPerformanceDataStorage();
+
+	/*iterating through sessions one by one*/
+	int session_id = 0;
+	unordered_set<int> sessions_to_check = {};
+	for (auto& current_session : all_sessions)
 	{
-		std::cout << "\nincorrect algorithm name\n";
-		std::cin.get();
+		session_id++;
+
+		/*****************************************************************************/
+		/******** setup local stuff for current session based on global stuff ********/
+
+		/*setup this session*/
+		vector<Client> session_clients;
+		for (auto& it : current_session)
+		{
+			session_clients.push_back(global.client.at(it));
+		}
+
+		/*setup this session's assignment solution*/
+		vector<ID> client_assignment; // each element is the id of the assigned dc of the client with the same position in session_clients
+		client_assignment.assign(session_clients.size(), 0); // initialization
+
+		/*setup paths between clients and find shortest paths for this session*/
+		FindShortestPaths(session_clients, global.dc_id_list);
+
+		/*derive the theoretical lower bound for this session (the length of the longest shortest path between all client pairs)
+		that is, let every c_i choose the shortest path to every c_j*/
+		//double theoretical_lower_bound = global.path_length.at(session_clients.at(0).shortest_path_to_client.at(session_clients.at(1).id)); // initialize
+		double theoretical_lower_bound = CalculatePathLength(session_clients.at(0).shortest_path_to_client.at(session_clients.at(1).id)); // initialize
+		for (auto& c_i : session_clients)
+		{
+			for (auto& c_j : session_clients)
+			{
+				if (c_j.id != c_i.id)
+				{
+					//auto current_length = global.path_length.at(c_i.shortest_path_to_client.at(c_j.id));
+					auto current_length = CalculatePathLength(c_i.shortest_path_to_client.at(c_j.id));
+					if (current_length > theoretical_lower_bound)
+					{						
+						theoretical_lower_bound = current_length; // find the longest shortest path
+					}
+				}
+			}
+		}
+
+		/*****************************************************************************/
+		/*************** determine the minimum achievable delay bound ****************/
+
+		auto algorithm_start_time = clock();		
+		
+		//achievable_delay_bound = (theoretical_lower_bound > global.sim_setting.recommended_delay_bound) ? theoretical_lower_bound : global.sim_setting.recommended_delay_bound;			
+		achievable_delay_bound = theoretical_lower_bound;
+
+		if ("CP" == alg_to_run)
+		{	
+			size_t max_allowed_datacenters = global.datacenter.size();
+			while (true) // for feasibility
+			{
+				num_evaluated_solutions = 0; // critical
+				CP(session_clients, client_assignment, max_allowed_datacenters);
+				if (num_evaluated_solutions > 0) break;
+				else achievable_delay_bound += global.sim_setting.bound_increment_stepsize;
+			}			
+			CP_optimal(session_clients, client_assignment, max_allowed_datacenters); // for optimization
+			achievable_delay_bound = GetAssignmentDelay(session_clients, client_assignment);
+		}
+		else if ("CP-1" == alg_to_run)
+		{			
+			size_t max_allowed_datacenters = 1;
+			while (true) // for feasibility
+			{
+				num_evaluated_solutions = 0; // critical
+				CP(session_clients, client_assignment, max_allowed_datacenters);
+				if (num_evaluated_solutions > 0) break;
+				else achievable_delay_bound += global.sim_setting.bound_increment_stepsize; // increase the delay bound
+			}
+			CP_optimal(session_clients, client_assignment, max_allowed_datacenters); // for optimization
+			achievable_delay_bound = GetAssignmentDelay(session_clients, client_assignment);
+		}
+		else if ("CP-2" == alg_to_run)
+		{			
+			size_t max_allowed_datacenters = 2;
+			while (true) // for feasibility
+			{
+				num_evaluated_solutions = 0; // critical
+				CP(session_clients, client_assignment, max_allowed_datacenters);
+				if (num_evaluated_solutions > 0) break;
+				else achievable_delay_bound += global.sim_setting.bound_increment_stepsize;
+			}
+			CP_optimal(session_clients, client_assignment, max_allowed_datacenters); // for optimization
+			achievable_delay_bound = GetAssignmentDelay(session_clients, client_assignment);
+		}
+		else if ("CP-3" == alg_to_run)
+		{			
+			size_t max_allowed_datacenters = 3;
+			while (true) // for feasibility
+			{
+				num_evaluated_solutions = 0; // critical
+				CP(session_clients, client_assignment, max_allowed_datacenters);
+				if (num_evaluated_solutions > 0) break;
+				else achievable_delay_bound += global.sim_setting.bound_increment_stepsize;
+			}
+			CP_optimal(session_clients, client_assignment, max_allowed_datacenters); // for optimization
+			achievable_delay_bound = GetAssignmentDelay(session_clients, client_assignment);
+		}
+		else if ("CP-4" == alg_to_run)
+		{			
+			size_t max_allowed_datacenters = 4;
+			while (true) // for feasibility
+			{
+				num_evaluated_solutions = 0; // critical
+				CP(session_clients, client_assignment, max_allowed_datacenters);
+				if (num_evaluated_solutions > 0) break;
+				else achievable_delay_bound += global.sim_setting.bound_increment_stepsize;
+			}
+			CP_optimal(session_clients, client_assignment, max_allowed_datacenters); // for optimization
+			achievable_delay_bound = GetAssignmentDelay(session_clients, client_assignment);
+		}
+		else if ("CP-5" == alg_to_run)
+		{
+			size_t max_allowed_datacenters = 5;
+			while (true) // for feasibility
+			{
+				num_evaluated_solutions = 0; // critical
+				CP(session_clients, client_assignment, max_allowed_datacenters);
+				if (num_evaluated_solutions > 0) break;
+				else achievable_delay_bound += global.sim_setting.bound_increment_stepsize;
+			}
+			CP_optimal(session_clients, client_assignment, max_allowed_datacenters); // for optimization
+			achievable_delay_bound = GetAssignmentDelay(session_clients, client_assignment);
+		}
+		else if ("NA-all" == alg_to_run)
+		{
+			NA_all(session_clients, client_assignment);
+			num_evaluated_solutions = 1;
+			achievable_delay_bound = GetAssignmentDelay(session_clients, client_assignment);
+		}
+		else if ("NA-sub" == alg_to_run)
+		{			
+			while (true) // for feasibility
+			{
+				num_evaluated_solutions = 0; // critical
+				NA_sub(session_clients, client_assignment);
+				if (num_evaluated_solutions > 0) break;
+				else achievable_delay_bound += global.sim_setting.bound_increment_stepsize;
+			}			
+			NA_sub_optimal(session_clients, client_assignment); // for optimization
+			achievable_delay_bound = GetAssignmentDelay(session_clients, client_assignment);
+		}
+		else if ("Random" == alg_to_run)
+		{
+			Random(client_assignment);
+			num_evaluated_solutions = 1;
+			achievable_delay_bound = GetAssignmentDelay(session_clients, client_assignment);
+		}
+		else
+		{
+			std::cout << "\nincorrect algorithm name\n";
+			std::cin.get();
+		}
+
+		alg_running_time = difftime(clock(), algorithm_start_time);
+
+		/*record performance metrics for this session*/
+		//achievable_delay_bound_all_sessions.push_back(achievable_delay_bound);
+		achievable_delay_bound_all_sessions.push_back(achievable_delay_bound / theoretical_lower_bound);
+		data_transfer_cost_all_sessions.push_back(CalculateAssignmentCost(session_clients, client_assignment));
+		interDC_cost_ratio_all_sessions.push_back(interDC_cost_ratio);
+		num_of_chosen_DCs_all_sessions.push_back(num_of_chosen_DCs);
+		num_evaluated_solutions_all_sessions.push_back(num_evaluated_solutions);
+		alg_running_time_all_sessions.push_back(alg_running_time);
+
+		/*output assignment details for some selected sessions*/
+		if (!sessions_to_check.empty() && sessions_to_check.find(session_id) != sessions_to_check.end())
+		{
+			for (int i = 0; i < session_clients.size(); i++)
+			{
+				session_clients.at(i).assigned_dc = client_assignment.at(i);
+			}
+			sort(session_clients.begin(), session_clients.end());
+			OutputAssignmentOfOneSession(session_id, session_clients);
+		}
+		else if (sessions_to_check.empty())
+		{
+			for (int i = 0; i < session_clients.size(); i++)
+			{
+				session_clients.at(i).assigned_dc = client_assignment.at(i);
+			}
+			sort(session_clients.begin(), session_clients.end());
+			OutputAssignmentOfOneSession(session_id, session_clients);
+		}
 	}
+
+	/*output aggregated performance metrics*/
+	OutputPerformanceData();
 }
 
 /*CP (constraint satisfaction problem)*/
@@ -953,7 +1141,7 @@ void Simulation::CP(vector<Client>& session_clients, vector<ID>& client_assignme
 		}
 	}
 
-	/*check if achieved_delay_bound is valid*/	
+	/*check if achievable_delay_bound is valid*/	
 	if (EnforceLocalConsistency(session_clients)) // each client's dc_domain will be modified (reduced)
 	{		
 		std::sort(session_clients.begin(), session_clients.end(), ClientComparator_ByDomainSize); // sorting can improve the efficiency substantially
@@ -989,124 +1177,7 @@ void Simulation::CP_optimal(vector<Client>& session_clients, vector<ID>& client_
 	client_assignment = optimal_client_assignment;
 }
 
-/*run simulation using CP*/
-void Simulation::Alg_CP(const size_t max_allowed_datacenters, const bool need_optimal_solution)
-{
-	/*reset those performance stuff for this algorithm*/
-	ResetPerformanceDataStorage();
-
-	/*iterating through sessions one by one*/
-	int session_id = 0;
-	unordered_set<int> sessions_to_check = {};
-	for (auto& current_session : all_sessions)
-	{
-		session_id++;
-
-		/*****************************************************************************/
-		/******** setup local stuff for current session based on global stuff ********/	
-
-		/*setup this session*/
-		vector<Client> session_clients;		
-		for (auto& it : current_session)
-		{
-			session_clients.push_back(global.client.at(it));
-		}
-
-		/*setup this session's assignment solution*/
-		vector<ID> client_assignment; // each element is the id of the assigned dc of the client with the same position in session_clients
-		client_assignment.assign(session_clients.size(), 0); // initialization
-
-		/*setup paths between clients and find shortest paths for this session*/
-		FindShortestPaths(session_clients, global.dc_id_list);
-
-		/*derive the theoretical lower bound for this session (the length of the longest shortest path between all client pairs)
-		that is, let every c_i choose the shortest path to every c_j*/
-		//double theoretical_lower_bound = global.path_length.at(session_clients.at(0).shortest_path_to_client.at(session_clients.at(1).id)); // initialize
-		double theoretical_lower_bound = CalculatePathLength(session_clients.at(0).shortest_path_to_client.at(session_clients.at(1).id)); // initialize
-		for (auto& c_i : session_clients)
-		{
-			for (auto& c_j : session_clients)
-			{
-				if (c_j.id != c_i.id)
-				{
-					//if (global.path_length.at(c_i.shortest_path_to_client.at(c_j.id)) > theoretical_lower_bound)
-					if (CalculatePathLength(c_i.shortest_path_to_client.at(c_j.id)) > theoretical_lower_bound)
-					{
-						//theoretical_lower_bound = global.path_length.at(c_i.shortest_path_to_client.at(c_j.id)); // find the longest shortest path
-						theoretical_lower_bound = CalculatePathLength(c_i.shortest_path_to_client.at(c_j.id)); // find the longest shortest path
-					}
-				}
-			}
-		}
-
-		/*****************************************************************************/
-		/*************** determine the minimum achievable delay bound ****************/
-
-		auto algorithm_start_time = clock();
-
-		achieved_delay_bound = global.sim_setting.recommended_delay_bound; // initialize		
-
-		/*Phase 1: using the theoretical lower bound (the necessary condition for the delay bound to be feasible)*/
-		while (achieved_delay_bound < theoretical_lower_bound)
-		{
-			achieved_delay_bound += global.sim_setting.bound_increment_stepsize;
-		}
-
-		/*Phase 2: using CP*/
-		while (true)
-		{
-			num_evaluated_solutions = 0; // initialize
-			CP(session_clients, client_assignment, max_allowed_datacenters);			
-			if (num_evaluated_solutions > 0)
-				break; // break the loop since we find the valid achieved_delay_bound
-			else
-				achieved_delay_bound += global.sim_setting.bound_increment_stepsize; //increase the delay bound
-		}
-					
-		/*****************************************************************************/
-		/***************** find the cost-optimal solution (if needed) ****************/
-		if (need_optimal_solution) CP_optimal(session_clients, client_assignment, max_allowed_datacenters);
-		
-		alg_running_time = difftime(clock(), algorithm_start_time);
-
-		/*record performance metrics for this session*/
-		achieved_delay_bound_all_sessions.push_back(achieved_delay_bound);		
-		data_transfer_cost_all_sessions.push_back(CalculateAssignmentCost(session_clients, client_assignment));
-		interDC_cost_ratio_all_sessions.push_back(interDC_cost_ratio);
-		num_of_chosen_DCs_all_sessions.push_back(num_of_chosen_DCs);
-		num_evaluated_solutions_all_sessions.push_back(num_evaluated_solutions);
-		alg_running_time_all_sessions.push_back(alg_running_time);
-
-		/*output assignment details for some selected sessions*/
-		if (!sessions_to_check.empty() && sessions_to_check.find(session_id) != sessions_to_check.end())
-		{
-			for (int i = 0; i < session_clients.size(); i++)
-			{
-				session_clients.at(i).assigned_dc = client_assignment.at(i);
-			}			
-			
-			sort(session_clients.begin(), session_clients.end());
-
-			OutputAssignmentOfOneSession(session_id, session_clients);
-		}
-		else if (sessions_to_check.empty())
-		{
-			for (int i = 0; i < session_clients.size(); i++)
-			{
-				session_clients.at(i).assigned_dc = client_assignment.at(i);
-			}
-
-			sort(session_clients.begin(), session_clients.end());
-
-			OutputAssignmentOfOneSession(session_id, session_clients);
-		}
-	}
-
-	/*output aggregated performance metrics*/
-	OutputPerformanceData();
-}
-
-/*for determining the achieved_delay_bound*/
+/*a baseline algorithm*/
 void Simulation::NA_all(vector<Client>& session_clients, vector<ID>& client_assignment)
 {
 	/*assign each client to its globally nearest dc*/
@@ -1114,130 +1185,20 @@ void Simulation::NA_all(vector<Client>& session_clients, vector<ID>& client_assi
 	{		
 		client_assignment.at(i) = session_clients.at(i).nearest_dc;
 	}
+}
 
-	/*check if achieved_delay_bound is valid*/
-	if (IsValidAssignment(session_clients, client_assignment))
+/*another baseline algorithm*/
+void Simulation::Random(vector<ID>& client_assignment)
+{
+	auto shuffled_dc_list = global.dc_id_list; // avoid shuffling the global.dc_id_list
+	for (size_t i = 0; i < client_assignment.size(); i++)
 	{
-		num_evaluated_solutions++;
+		random_shuffle(shuffled_dc_list.begin(), shuffled_dc_list.end());
+		client_assignment.at(i) = shuffled_dc_list.front();
 	}
 }
 
-/*run simulation using NA_all*/
-void Simulation::Alg_NA_all()
-{		
-	ResetPerformanceDataStorage();
-	
-	/*iterating through sessions one by one*/
-	int session_id = 0;
-	unordered_set<int> sessions_to_check = {};
-	for (auto& current_session : all_sessions)
-	{
-		session_id++;
-		
-		/*****************************************************************************/
-		/******** setup local stuff for current session based on global stuff ********/
-
-		/*setup this session*/
-		vector<Client> session_clients;
-		for (auto& it : current_session)
-		{
-			session_clients.push_back(global.client.at(it));
-		}
-
-		/*setup this session's assignment solution*/
-		vector<ID> client_assignment; // each element is the id of the assigned dc of the client with the same position in session_clients
-		client_assignment.assign(session_clients.size(), 0); // initialization
-			
-		/*setup paths between clients and find shortest paths for this session*/
-		FindShortestPaths(session_clients, global.dc_id_list);
-
-		/*derive the theoretical lower bound for this session (the length of the longest shortest path between all client pairs)
-		that is, let every c_i choose the shortest path to every c_j*/
-		//double theoretical_lower_bound = global.path_length.at(session_clients.at(0).shortest_path_to_client.at(session_clients.at(1).id)); // initialize
-		double theoretical_lower_bound = CalculatePathLength(session_clients.at(0).shortest_path_to_client.at(session_clients.at(1).id)); // initialize
-		for (auto& c_i : session_clients)
-		{
-			for (auto& c_j : session_clients)
-			{
-				if (c_j.id != c_i.id)
-				{
-					//if (global.path_length.at(c_i.shortest_path_to_client.at(c_j.id)) > theoretical_lower_bound)
-					if (CalculatePathLength(c_i.shortest_path_to_client.at(c_j.id)) > theoretical_lower_bound)
-					{
-						//theoretical_lower_bound = global.path_length.at(c_i.shortest_path_to_client.at(c_j.id)); // find the longest shortest path
-						theoretical_lower_bound = CalculatePathLength(c_i.shortest_path_to_client.at(c_j.id)); // find the longest shortest path
-					}
-				}
-			}
-		}
-
-		/*****************************************************************************/
-		/*************** determine the minimum achievable delay bound ****************/
-
-		auto algorithm_start_time = clock();
-
-		achieved_delay_bound = global.sim_setting.recommended_delay_bound; // initialize		
-
-		/*Phase 1: using the theoretical lower bound*/
-		while (achieved_delay_bound < theoretical_lower_bound)
-		{
-			achieved_delay_bound += global.sim_setting.bound_increment_stepsize;
-		}
-
-		/*Phase 2: using NA_all*/
-		while (true)
-		{
-			num_evaluated_solutions = 0; // initialize
-			NA_all(session_clients, client_assignment); // num_evaluated_solutions may be modified
-
-			if (num_evaluated_solutions > 0) break; // break the loop since we find the valid achieved_delay_bound
-			else achieved_delay_bound += global.sim_setting.bound_increment_stepsize; //increase the delay bound
-		}		
-
-		/*****************************************************************************/
-		/***************** find the cost-optimal solution ****************************/
-		/*nothing to do as it is the only solution*/
-
-		alg_running_time = difftime(clock(), algorithm_start_time);
-		
-		/*record performance metrics for this session*/		
-		achieved_delay_bound_all_sessions.push_back(achieved_delay_bound);
-		data_transfer_cost_all_sessions.push_back(CalculateAssignmentCost(session_clients, client_assignment));
-		interDC_cost_ratio_all_sessions.push_back(interDC_cost_ratio);
-		num_of_chosen_DCs_all_sessions.push_back(num_of_chosen_DCs);
-		num_evaluated_solutions_all_sessions.push_back(num_evaluated_solutions);
-		alg_running_time_all_sessions.push_back(alg_running_time);
-
-		/*output assignment details for some selected sessions*/
-		if (!sessions_to_check.empty() && sessions_to_check.find(session_id) != sessions_to_check.end())
-		{
-			for (int i = 0; i < session_clients.size(); i++)
-			{
-				session_clients.at(i).assigned_dc = client_assignment.at(i);
-			}
-
-			sort(session_clients.begin(), session_clients.end());
-
-			OutputAssignmentOfOneSession(session_id, session_clients);
-		}
-		else if (sessions_to_check.empty())
-		{
-			for (int i = 0; i < session_clients.size(); i++)
-			{
-				session_clients.at(i).assigned_dc = client_assignment.at(i);
-			}
-
-			sort(session_clients.begin(), session_clients.end());
-
-			OutputAssignmentOfOneSession(session_id, session_clients);
-		}
-	}
-
-	/*output aggregated performance metrics*/
-	OutputPerformanceData();
-}
-
-/*for determining the achieved_delay_bound*/
+/*for determining the achievable_delay_bound*/
 void Simulation::NA_sub(vector<Client>& session_clients, vector<ID>& client_assignment)
 {
 	/*iterating through subsets (break once found)*/
@@ -1250,8 +1211,8 @@ void Simulation::NA_sub(vector<Client>& session_clients, vector<ID>& client_assi
 			client_assignment.at(i) = session_clients.at(i).nearest_dc;
 		}
 
-		/*check if achieved_delay_bound is valid*/
-		if (IsValidAssignment(session_clients, client_assignment))
+		/*check if achievable_delay_bound is valid*/
+		if (GetAssignmentDelay(session_clients, client_assignment) <= achievable_delay_bound)
 		{
 			num_evaluated_solutions++;
 			break;
@@ -1279,7 +1240,7 @@ void Simulation::NA_sub_optimal(vector<Client>& session_clients, vector<ID>& cli
 		}
 
 		/*only consider valid assignment*/
-		if (IsValidAssignment(session_clients, client_assignment))
+		if (GetAssignmentDelay(session_clients, client_assignment) <= achievable_delay_bound)
 		{
 			num_evaluated_solutions++; // count it
 			
@@ -1304,146 +1265,26 @@ void Simulation::NA_sub_optimal(vector<Client>& session_clients, vector<ID>& cli
 	client_assignment = optimal_client_assignment;
 }
 
-bool Simulation::IsValidAssignment(const vector<Client>& session_clients, const vector<ID>& client_assignment)
+double Simulation::GetAssignmentDelay(const vector<Client>& session_clients, const vector<ID>& client_assignment)
 {
-	/*return false once a violation is detected*/
+	double assignment_delay = 0;
 	for (size_t i = 0; i < session_clients.size(); i++)
 	{
-		for (int j = 0; j < session_clients.size(); j++)
+		for (size_t j = 0; j < session_clients.size(); j++)
 		{
 			if (j != i)
-			{
-				//if (global.path_length.at(Path(session_clients.at(i).id, client_assignment.at(i), client_assignment.at(j), session_clients.at(j).id)) > achieved_delay_bound)
-				if (CalculatePathLength(Path(session_clients.at(i).id, client_assignment.at(i), client_assignment.at(j), session_clients.at(j).id)) > achieved_delay_bound)
-				{
-					return false;
-				}
+			{				
+				auto current_delay = CalculatePathLength(Path(session_clients.at(i).id, client_assignment.at(i), client_assignment.at(j), session_clients.at(j).id));
+				if (current_delay > assignment_delay) assignment_delay = current_delay;
 			}
 		}
-	}
-
-	/*return true if no violations detected*/
-	return true;
-}
-
-/*run simulation using NA_sub*/
-void Simulation::Alg_NA_sub()
-{
-	ResetPerformanceDataStorage();
-
-	/*iterating through sessions one by one*/
-	int session_id = 0;
-	unordered_set<int> sessions_to_check = {};
-	for (auto& current_session : all_sessions)
-	{
-		session_id++;
-
-		/*****************************************************************************/
-		/******** setup local stuff for current session based on global stuff ********/
-
-		/*setup this session*/
-		vector<Client> session_clients;
-		for (auto& it : current_session)
-		{
-			session_clients.push_back(global.client.at(it));
-		}
-
-		/*setup this session's assignment solution*/
-		vector<ID> client_assignment; // each element is the id of the assigned dc of the client with the same position in session_clients
-		client_assignment.assign(session_clients.size(), 0); // initialization
-
-		/*setup paths between clients and find shortest paths for this session*/
-		FindShortestPaths(session_clients, global.dc_id_list);
-
-		/*derive the theoretical lower bound for this session (the length of the longest shortest path between all client pairs)
-		that is, let every c_i choose the shortest path to every c_j*/
-		//double theoretical_lower_bound = global.path_length.at(session_clients.at(0).shortest_path_to_client.at(session_clients.at(1).id)); // initialize
-		double theoretical_lower_bound = CalculatePathLength(session_clients.at(0).shortest_path_to_client.at(session_clients.at(1).id)); // initialize
-		for (auto& c_i : session_clients)
-		{
-			for (auto& c_j : session_clients)
-			{
-				if (c_j.id != c_i.id)
-				{
-					//if (global.path_length.at(c_i.shortest_path_to_client.at(c_j.id)) > theoretical_lower_bound)
-					if (CalculatePathLength(c_i.shortest_path_to_client.at(c_j.id)) > theoretical_lower_bound)
-					{
-						//theoretical_lower_bound = global.path_length.at(c_i.shortest_path_to_client.at(c_j.id)); // find the longest shortest path
-						theoretical_lower_bound = CalculatePathLength(c_i.shortest_path_to_client.at(c_j.id)); // find the longest shortest path
-					}
-				}
-			}
-		}
-
-		/*****************************************************************************/
-		/*************** determine the minimum achievable delay bound ****************/
-
-		auto algorithm_start_time = clock();
-
-		achieved_delay_bound = global.sim_setting.recommended_delay_bound; // initialize		
-
-		/*Phase 1: using the theoretical lower bound*/
-		while (achieved_delay_bound < theoretical_lower_bound)
-		{
-			achieved_delay_bound += global.sim_setting.bound_increment_stepsize;
-		}
-
-		/*Phase 2: using NA_sub*/
-		while (true)
-		{
-			num_evaluated_solutions = 0; // initialize
-			NA_sub(session_clients, client_assignment); // num_evaluated_solutions may be modified
-
-			if (num_evaluated_solutions > 0) break; // break the loop since we find the valid achieved_delay_bound
-			else achieved_delay_bound += global.sim_setting.bound_increment_stepsize; //increase the delay bound
-		}
-		
-		/*****************************************************************************/
-		/***************** find the cost-optimal solution ****************************/
-		NA_sub_optimal(session_clients, client_assignment);
-
-		alg_running_time = difftime(clock(), algorithm_start_time);
-		
-		/*record performance metrics for this session*/
-		achieved_delay_bound_all_sessions.push_back(achieved_delay_bound);
-		data_transfer_cost_all_sessions.push_back(CalculateAssignmentCost(session_clients, client_assignment));
-		interDC_cost_ratio_all_sessions.push_back(interDC_cost_ratio);
-		num_of_chosen_DCs_all_sessions.push_back(num_of_chosen_DCs);
-		num_evaluated_solutions_all_sessions.push_back(num_evaluated_solutions);
-		alg_running_time_all_sessions.push_back(alg_running_time);
-
-		/*output assignment details for some selected sessions*/
-		if (!sessions_to_check.empty() && sessions_to_check.find(session_id) != sessions_to_check.end())
-		{
-			for (int i = 0; i < session_clients.size(); i++)
-			{
-				session_clients.at(i).assigned_dc = client_assignment.at(i);
-			}
-
-			sort(session_clients.begin(), session_clients.end());
-
-			OutputAssignmentOfOneSession(session_id, session_clients);
-		}
-		else if (sessions_to_check.empty())
-		{
-			for (int i = 0; i < session_clients.size(); i++)
-			{
-				session_clients.at(i).assigned_dc = client_assignment.at(i);
-			}
-
-			sort(session_clients.begin(), session_clients.end());
-
-			OutputAssignmentOfOneSession(session_id, session_clients);
-		}
-	}
-
-	/*output aggregated performance metrics*/
-	OutputPerformanceData();
+	}	
+	return assignment_delay;
 }
 
 void Simulation::ResetPerformanceDataStorage()
 {
-	achieved_delay_bound_all_sessions.clear();
+	achievable_delay_bound_all_sessions.clear();
 	data_transfer_cost_all_sessions.clear();
 	interDC_cost_ratio_all_sessions.clear();
 	num_of_chosen_DCs_all_sessions.clear();

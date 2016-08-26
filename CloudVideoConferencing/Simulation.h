@@ -65,22 +65,20 @@ bool DatacenterComparator_ByExternalBandwidthPrice(const Datacenter&, const Data
 
 struct Setting
 {
-	double recommended_delay_bound;
-	double maximum_allowed_delay_bound;
+	/*double recommended_delay_bound;
+	double maximum_allowed_delay_bound;*/
 	double session_size;	
 	double bound_increment_stepsize;
 	double session_count;
 
-	Setting(double given_recommended_delay_bound, double given_maximum_allowed_delay_bound, double given_session_size, double given_bound_increment_stepsize, double given_session_count)
-	{
-		recommended_delay_bound = given_recommended_delay_bound;
-		maximum_allowed_delay_bound = given_maximum_allowed_delay_bound;
+	Setting(double given_session_size, double given_bound_increment_stepsize, double given_session_count)
+	{		
 		session_size = given_session_size;		
 		bound_increment_stepsize = given_bound_increment_stepsize;
 		session_count = given_session_count;
 	}
 
-	Setting(){}
+	Setting() {}
 };
 
 struct Global
@@ -110,24 +108,21 @@ public:
 	Simulation(Setting given_sim_setting)
 	{
 		global.sim_setting = given_sim_setting;
-	}	
+	}
 	
 	string data_directory;	
 	string client_dc_latency_file;	
 	string output_directory;
 	bool cluster_by_subregion;
 	void Initialize();
-
-	string algorithm_to_run; // specify the algorithm to evaluate before calling Run()
+	
+	string alg_to_run;
 	bool output_assignment; // whether to output assignment details for each session	
 	void Run();
 
 	void CheckInterDatacenterLink();
 
 private:
-	void Alg_CP(const size_t max_allowed_datacenters = 100, const bool need_optimal_solution = true);
-	void Alg_NA_all();
-	void Alg_NA_sub();
 	
 	/*CP utility functions*/
 	bool EnforceLocalConsistency(vector<Client>&);
@@ -149,9 +144,10 @@ private:
 	void NA_all(vector<Client>&, vector<ID>&);
 	void NA_sub(vector<Client>&, vector<ID>&);
 	void NA_sub_optimal(vector<Client>&, vector<ID>&);
-	bool IsValidAssignment(const vector<Client>&, const vector<ID>&); // not used by CP
-
+	void Random(vector<ID>&);
+	
 	/*some utility functions*/	
+	double GetAssignmentDelay(const vector<Client>&, const vector<ID>&);
 	double CalculatePathLength(Path&);
 	void GenerateOneSession(vector<ID>&);
 	void GenerateOneSessionWithTwoRegion(vector<ID>&);
@@ -171,13 +167,13 @@ private:
 	vector<vector<ID>> all_dc_subsets;
 
 	/*the following are performance metrics*/
-	double achieved_delay_bound;
-	double data_transfer_cost;	
+	double achievable_delay_bound; // primary objective
+	double data_transfer_cost; // secondary objectve
 	double interDC_cost_ratio;
 	double num_of_chosen_DCs;
 	double num_evaluated_solutions;
 	double alg_running_time;
-	vector<double> achieved_delay_bound_all_sessions;
+	vector<double> achievable_delay_bound_all_sessions;
 	vector<double> data_transfer_cost_all_sessions;
 	vector<double> interDC_cost_ratio_all_sessions;
 	vector<double> num_of_chosen_DCs_all_sessions;
