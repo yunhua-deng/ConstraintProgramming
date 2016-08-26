@@ -630,10 +630,16 @@ void Simulation::Initialize()
 		c.region = global.datacenter.at(c.nearest_dc).name.substr(pos + 1, 2); // e.g. extract "ap" from "ec2-ap-northeast-1"
 		
 		/*create clusters*/
-		if (cluster_by_subregion) 
-			if ("ec2-sa-east-1" != c.region) global.client_cluster[c.subregion].push_back(c.id);
-		else 
-			if ("sa" != c.region) global.client_cluster[c.region].push_back(c.id);
+		if (cluster_by_subregion)
+		{
+			if (/*"ec2-sa-east-1" != c.subregion && */"ec2-ap-northeast-2" != c.subregion && "ec2-eu-west-1" != c.subregion)
+				global.client_cluster[c.subregion].push_back(c.id);
+		}
+		else
+		{
+			if ("sa" != c.region) 
+				global.client_cluster[c.region].push_back(c.id);
+		}
 		
 		/*record this client*/
 		global.client[c.id] = c;

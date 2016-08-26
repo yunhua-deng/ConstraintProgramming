@@ -86,7 +86,7 @@ int main(int argc, char *argv[])
 						
 			Simulation sim = Simulation(Setting(session_size, bound_increment_stepsize, session_count));
 			sim.data_directory = ".\\Data\\";
-			sim.client_dc_latency_file = "ping_to_prefix_median_matrix.csv";
+			sim.client_dc_latency_file = "ping_to_pl_median_matrix.csv";
 			sim.output_directory = sim.data_directory + "Output\\";
 			sim.cluster_by_subregion = true;
 			sim.output_assignment = false;
