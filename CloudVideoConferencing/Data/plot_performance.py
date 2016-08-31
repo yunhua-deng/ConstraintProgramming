@@ -12,10 +12,11 @@ import matplotlib
 from collections import defaultdict
 import matplotlib.pyplot as plt
 
-session_size_list = ['8', '12', '16']
-session_count_list = ['1000', '1000', '1000']
+session_size_list = ['4', '8', '12', '16']
+#session_count_list = ['1000', '1000', '1000', '1000']
 
-for session_size, session_count in zip(session_size_list, session_count_list):
+#for session_size, session_count in zip(session_size_list, session_count_list):
+for session_size in session_size_list:
 	all_data = defaultdict(list)
 	alg_name_list = []
 	metric_name_list = []
@@ -54,7 +55,7 @@ for session_size, session_count in zip(session_size_list, session_count_list):
 		axes[counter].yaxis.grid(True)		
 		counter+=1
 	plt.suptitle('Performance comparison with session size = ' + session_size, fontsize=20, y=1.05);
-	plt.savefig('Performance_for_SessionSize-' + session_size + '.pdf', bbox_inches='tight')
+	plt.savefig('Performance_for_SessionSize-' + session_size + '.tiff', bbox_inches='tight')
 	
 #for metric_name in all_data:
 #	 plt.figure()	 
@@ -62,4 +63,4 @@ for session_size, session_count in zip(session_size_list, session_count_list):
 #	 plt.xlabel('Algorithm')
 #	 plt.boxplot(all_data[metric_name], labels=alg_name_list, showmeans=True)
 #	 plt.show()
-#	 #plt.savefig(metric_name + '.pdf')
+#	 #plt.savefig(metric_name + '.emf')

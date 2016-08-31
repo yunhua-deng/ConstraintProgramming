@@ -1,0 +1,198 @@
+common_settings
+ | session_count: 1000
+ | session_size: 4
+ | | alg_name: CP-2
+ | | | achieved_delay_bound_avg:	1.07554
+ | | | achieved_delay_bound_99th:	1.46792
+ | | | data_transfer_cost_avg:	0.887689
+ | | | data_transfer_cost_99th:	1.256
+ | | | interDC_cost_ratio_avg:	0.0814108
+ | | | interDC_cost_ratio_99th:	0.13986
+ | | | num_chosen_DCs_avg:	1.777
+ | | | num_chosen_DCs_99th:	2
+ | | | num_evaluated_solutions_avg: 	1.503
+ | | | num_evaluated_solutions_99th:	6
+ | | | alg_running_time_avg:	0.083
+ | | alg_name: CP-3
+ | | | achieved_delay_bound_avg:	1.05705
+ | | | achieved_delay_bound_99th:	1.44526
+ | | | data_transfer_cost_avg:	1.06143
+ | | | data_transfer_cost_99th:	1.62193
+ | | | interDC_cost_ratio_avg:	0.139568
+ | | | interDC_cost_ratio_99th:	0.284519
+ | | | num_chosen_DCs_avg:	2.26
+ | | | num_chosen_DCs_99th:	3
+ | | | num_evaluated_solutions_avg: 	3.704
+ | | | num_evaluated_solutions_99th:	13
+ | | | alg_running_time_avg:	0.07
+ | | alg_name: CP-4
+ | | | achieved_delay_bound_avg:	1.05475
+ | | | achieved_delay_bound_99th:	1.43825
+ | | | data_transfer_cost_avg:	1.0814
+ | | | data_transfer_cost_99th:	1.8126
+ | | | interDC_cost_ratio_avg:	0.147365
+ | | | interDC_cost_ratio_99th:	0.368272
+ | | | num_chosen_DCs_avg:	2.337
+ | | | num_chosen_DCs_99th:	4
+ | | | num_evaluated_solutions_avg: 	6.954
+ | | | num_evaluated_solutions_99th:	23
+ | | | alg_running_time_avg:	0.075
+ | | alg_name: CP-5
+ | | | achieved_delay_bound_avg:	1.05475
+ | | | achieved_delay_bound_99th:	1.43825
+ | | | data_transfer_cost_avg:	1.0814
+ | | | data_transfer_cost_99th:	1.8126
+ | | | interDC_cost_ratio_avg:	0.147365
+ | | | interDC_cost_ratio_99th:	0.368272
+ | | | num_chosen_DCs_avg:	2.337
+ | | | num_chosen_DCs_99th:	4
+ | | | num_evaluated_solutions_avg: 	6.954
+ | | | num_evaluated_solutions_99th:	23
+ | | | alg_running_time_avg:	0.069
+ | session_size: 8
+ | | alg_name: CP-2
+ | | | achieved_delay_bound_avg:	1.09643
+ | | | achieved_delay_bound_99th:	1.3354
+ | | | data_transfer_cost_avg:	1.62794
+ | | | data_transfer_cost_99th:	2.20571
+ | | | interDC_cost_ratio_avg:	0.0364987
+ | | | interDC_cost_ratio_99th:	0.0569948
+ | | | num_chosen_DCs_avg:	1.844
+ | | | num_chosen_DCs_99th:	2
+ | | | num_evaluated_solutions_avg: 	3.754
+ | | | num_evaluated_solutions_99th:	25
+ | | | alg_running_time_avg:	0.481
+ | | alg_name: CP-3
+ | | | achieved_delay_bound_avg:	1.06719
+ | | | achieved_delay_bound_99th:	1.26131
+ | | | data_transfer_cost_avg:	1.78256
+ | | | data_transfer_cost_99th:	2.64637
+ | | | interDC_cost_ratio_avg:	0.0703303
+ | | | interDC_cost_ratio_99th:	0.128
+ | | | num_chosen_DCs_avg:	2.544
+ | | | num_chosen_DCs_99th:	3
+ | | | num_evaluated_solutions_avg: 	22.104
+ | | | num_evaluated_solutions_99th:	197
+ | | | alg_running_time_avg:	0.396
+ | | alg_name: CP-4
+ | | | achieved_delay_bound_avg:	1.05504
+ | | | achieved_delay_bound_99th:	1.23631
+ | | | data_transfer_cost_avg:	1.92321
+ | | | data_transfer_cost_99th:	2.91717
+ | | | interDC_cost_ratio_avg:	0.0928319
+ | | | interDC_cost_ratio_99th:	0.183936
+ | | | num_chosen_DCs_avg:	2.936
+ | | | num_chosen_DCs_99th:	4
+ | | | num_evaluated_solutions_avg: 	103.477
+ | | | num_evaluated_solutions_99th:	1035
+ | | | alg_running_time_avg:	0.726
+ | | alg_name: CP-5
+ | | | achieved_delay_bound_avg:	1.05312
+ | | | achieved_delay_bound_99th:	1.23163
+ | | | data_transfer_cost_avg:	1.93747
+ | | | data_transfer_cost_99th:	2.99946
+ | | | interDC_cost_ratio_avg:	0.0968603
+ | | | interDC_cost_ratio_99th:	0.222222
+ | | | num_chosen_DCs_avg:	3.023
+ | | | num_chosen_DCs_99th:	5
+ | | | num_evaluated_solutions_avg: 	277.832
+ | | | num_evaluated_solutions_99th:	2799
+ | | | alg_running_time_avg:	1.585
+ | session_size: 12
+ | | alg_name: CP-2
+ | | | achieved_delay_bound_avg:	1.11386
+ | | | achieved_delay_bound_99th:	1.29526
+ | | | data_transfer_cost_avg:	2.36465
+ | | | data_transfer_cost_99th:	3.24
+ | | | interDC_cost_ratio_avg:	0.022995
+ | | | interDC_cost_ratio_99th:	0.037037
+ | | | num_chosen_DCs_avg:	1.877
+ | | | num_chosen_DCs_99th:	2
+ | | | num_evaluated_solutions_avg: 	12.442
+ | | | num_evaluated_solutions_99th:	142
+ | | | alg_running_time_avg:	1.327
+ | | alg_name: CP-3
+ | | | achieved_delay_bound_avg:	1.07877
+ | | | achieved_delay_bound_99th:	1.24768
+ | | | data_transfer_cost_avg:	2.52797
+ | | | data_transfer_cost_99th:	3.5846
+ | | | interDC_cost_ratio_avg:	0.0471394
+ | | | interDC_cost_ratio_99th:	0.0763359
+ | | | num_chosen_DCs_avg:	2.673
+ | | | num_chosen_DCs_99th:	3
+ | | | num_evaluated_solutions_avg: 	186.029
+ | | | num_evaluated_solutions_99th:	3109
+ | | | alg_running_time_avg:	2.193
+ | | alg_name: CP-4
+ | | | achieved_delay_bound_avg:	1.06068
+ | | | achieved_delay_bound_99th:	1.22705
+ | | | data_transfer_cost_avg:	2.70286
+ | | | data_transfer_cost_99th:	3.9532
+ | | | interDC_cost_ratio_avg:	0.067783
+ | | | interDC_cost_ratio_99th:	0.12077
+ | | | num_chosen_DCs_avg:	3.274
+ | | | num_chosen_DCs_99th:	4
+ | | | num_evaluated_solutions_avg: 	2047.72
+ | | | num_evaluated_solutions_99th:	32975
+ | | | alg_running_time_avg:	14.926
+ | | alg_name: CP-5
+ | | | achieved_delay_bound_avg:	1.05682
+ | | | achieved_delay_bound_99th:	1.22284
+ | | | data_transfer_cost_avg:	2.75543
+ | | | data_transfer_cost_99th:	4.15042
+ | | | interDC_cost_ratio_avg:	0.0752738
+ | | | interDC_cost_ratio_99th:	0.155578
+ | | | num_chosen_DCs_avg:	3.497
+ | | | num_chosen_DCs_99th:	5
+ | | | num_evaluated_solutions_avg: 	10682.6
+ | | | num_evaluated_solutions_99th:	157723
+ | | | alg_running_time_avg:	74.769
+ | session_size: 16
+ | | alg_name: CP-2
+ | | | achieved_delay_bound_avg:	1.12526
+ | | | achieved_delay_bound_99th:	1.30978
+ | | | data_transfer_cost_avg:	3.09996
+ | | | data_transfer_cost_99th:	3.93867
+ | | | interDC_cost_ratio_avg:	0.0167203
+ | | | interDC_cost_ratio_99th:	0.0250508
+ | | | num_chosen_DCs_avg:	1.892
+ | | | num_chosen_DCs_99th:	2
+ | | | num_evaluated_solutions_avg: 	89.922
+ | | | num_evaluated_solutions_99th:	1294
+ | | | alg_running_time_avg:	4.209
+ | | alg_name: CP-3
+ | | | achieved_delay_bound_avg:	1.08963
+ | | | achieved_delay_bound_99th:	1.2449
+ | | | data_transfer_cost_avg:	3.274
+ | | | data_transfer_cost_99th:	4.39467
+ | | | interDC_cost_ratio_avg:	0.0351139
+ | | | interDC_cost_ratio_99th:	0.0559441
+ | | | num_chosen_DCs_avg:	2.743
+ | | | num_chosen_DCs_99th:	3
+ | | | num_evaluated_solutions_avg: 	2909.68
+ | | | num_evaluated_solutions_99th:	61210
+ | | | alg_running_time_avg:	29.924
+ | | alg_name: CP-4
+ | | | achieved_delay_bound_avg:	1.06763
+ | | | achieved_delay_bound_99th:	1.21973
+ | | | data_transfer_cost_avg:	3.46349
+ | | | data_transfer_cost_99th:	5.094
+ | | | interDC_cost_ratio_avg:	0.0527883
+ | | | interDC_cost_ratio_99th:	0.0895962
+ | | | num_chosen_DCs_avg:	3.477
+ | | | num_chosen_DCs_99th:	4
+ | | | num_evaluated_solutions_avg: 	80178
+ | | | num_evaluated_solutions_99th:	1.24177e+06
+ | | | alg_running_time_avg:	734.201
+ | | alg_name: CP-5
+ | | | achieved_delay_bound_avg:	1.06237
+ | | | achieved_delay_bound_99th:	1.21973
+ | | | data_transfer_cost_avg:	3.53087
+ | | | data_transfer_cost_99th:	5.10533
+ | | | interDC_cost_ratio_avg:	0.0607939
+ | | | interDC_cost_ratio_99th:	0.117178
+ | | | num_chosen_DCs_avg:	3.811
+ | | | num_chosen_DCs_99th:	5
+ | | | num_evaluated_solutions_avg: 	753181
+ | | | num_evaluated_solutions_99th:	1.19434e+07
+ | | | alg_running_time_avg:	6783.35

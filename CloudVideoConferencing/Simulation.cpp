@@ -1150,13 +1150,13 @@ void Simulation::Run_MinCost(const string alg_to_get_delay_bound)
 		if (alg_to_get_delay_bound.find("CP") != string::npos) // CP
 		{
 			size_t max_allowed_datacenters;
-			if ("CP" == alg_to_run)	max_allowed_datacenters = global.datacenter.size();
-			else if ("CP-1" == alg_to_run) max_allowed_datacenters = 1;
-			else if ("CP-2" == alg_to_run) max_allowed_datacenters = 2;
-			else if ("CP-3" == alg_to_run) max_allowed_datacenters = 3;
-			else if ("CP-4" == alg_to_run) max_allowed_datacenters = 4;
-			else if ("CP-5" == alg_to_run) max_allowed_datacenters = 5;
-			else if ("CP-6" == alg_to_run) max_allowed_datacenters = 6;
+			if ("CP" == alg_to_get_delay_bound)	max_allowed_datacenters = global.datacenter.size();
+			else if ("CP-1" == alg_to_get_delay_bound) max_allowed_datacenters = 1;
+			else if ("CP-2" == alg_to_get_delay_bound) max_allowed_datacenters = 2;
+			else if ("CP-3" == alg_to_get_delay_bound) max_allowed_datacenters = 3;
+			else if ("CP-4" == alg_to_get_delay_bound) max_allowed_datacenters = 4;
+			else if ("CP-5" == alg_to_get_delay_bound) max_allowed_datacenters = 5;
+			else if ("CP-6" == alg_to_get_delay_bound) max_allowed_datacenters = 6;
 
 			num_evaluated_solutions = 0; // critical
 			while (true)
