@@ -68,14 +68,12 @@ struct Setting
 {
 	/*double recommended_delay_bound;
 	double maximum_allowed_delay_bound;*/
-	double session_size;	
-	double bound_increment_stepsize;
+	double session_size;
 	double session_count;
 
-	Setting(double given_session_size, double given_bound_increment_stepsize, double given_session_count)
+	Setting(double given_session_size, double given_session_count)
 	{		
 		session_size = given_session_size;		
-		bound_increment_stepsize = given_bound_increment_stepsize;
 		session_count = given_session_count;
 	}
 

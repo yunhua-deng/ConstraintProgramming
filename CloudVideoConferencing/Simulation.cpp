@@ -1016,7 +1016,7 @@ void Simulation::Run()
 			{				
 				CP(session_clients, client_assignment, max_allowed_datacenters);				
 				if (num_evaluated_solutions > 0) { num_evaluated_solutions = 0; break; }
-				achieved_delay_bound += global.sim_setting.bound_increment_stepsize;
+				achieved_delay_bound++;
 			}			
 			CP_MinCost(session_clients, client_assignment, max_allowed_datacenters);
 		}
@@ -1034,7 +1034,7 @@ void Simulation::Run()
 			{
 				NA_all(session_clients, client_assignment, k);
 				if (num_evaluated_solutions > 0) { num_evaluated_solutions = 0; break; }
-				achieved_delay_bound += global.sim_setting.bound_increment_stepsize;
+				achieved_delay_bound++;
 			}
 			NA_all_MinCost(session_clients, client_assignment, k);
 		}
@@ -1045,7 +1045,7 @@ void Simulation::Run()
 			{				
 				NA_sub(session_clients, client_assignment);
 				if (num_evaluated_solutions > 0) { num_evaluated_solutions = 0; break; }
-				achieved_delay_bound += global.sim_setting.bound_increment_stepsize;
+				achieved_delay_bound++;
 			}			
 			NA_sub_MinCost(session_clients, client_assignment);
 		}
@@ -1163,7 +1163,7 @@ void Simulation::Run_MinCost(const string alg_to_get_delay_bound)
 			{
 				CP(session_clients, client_assignment, max_allowed_datacenters);
 				if (num_evaluated_solutions > 0) { num_evaluated_solutions = 0; break; }
-				achieved_delay_bound += global.sim_setting.bound_increment_stepsize;
+				achieved_delay_bound++;
 			}
 		}
 		else if (alg_to_get_delay_bound.find("NA-all") != string::npos)
@@ -1180,7 +1180,7 @@ void Simulation::Run_MinCost(const string alg_to_get_delay_bound)
 			{
 				NA_all(session_clients, client_assignment, k);
 				if (num_evaluated_solutions > 0) { num_evaluated_solutions = 0; break; }
-				achieved_delay_bound += global.sim_setting.bound_increment_stepsize;				
+				achieved_delay_bound++;				
 			}
 		}
 		else if ("NA-sub" == alg_to_get_delay_bound)
@@ -1190,7 +1190,7 @@ void Simulation::Run_MinCost(const string alg_to_get_delay_bound)
 			{				
 				NA_sub(session_clients, client_assignment);
 				if (num_evaluated_solutions > 0) { num_evaluated_solutions = 0; break; }
-				achieved_delay_bound += global.sim_setting.bound_increment_stepsize;
+				achieved_delay_bound++;
 			}
 		}
 		else
@@ -1215,7 +1215,7 @@ void Simulation::Run_MinCost(const string alg_to_get_delay_bound)
 			{
 				CP(session_clients, client_assignment, max_allowed_datacenters);
 				if (num_evaluated_solutions > 0) { num_evaluated_solutions = 0; break; }
-				achieved_delay_bound += global.sim_setting.bound_increment_stepsize;
+				achieved_delay_bound++;
 			}
 			CP_MinCost(session_clients, client_assignment, max_allowed_datacenters);
 		}
@@ -1233,7 +1233,7 @@ void Simulation::Run_MinCost(const string alg_to_get_delay_bound)
 			{
 				NA_all(session_clients, client_assignment, k);
 				if (num_evaluated_solutions > 0) { num_evaluated_solutions = 0; break; }
-				achieved_delay_bound += global.sim_setting.bound_increment_stepsize;
+				achieved_delay_bound++;
 			}
 			NA_all_MinCost(session_clients, client_assignment, k);
 		}
@@ -1244,7 +1244,7 @@ void Simulation::Run_MinCost(const string alg_to_get_delay_bound)
 			{
 				NA_sub(session_clients, client_assignment);
 				if (num_evaluated_solutions > 0) { num_evaluated_solutions = 0; break; }
-				achieved_delay_bound += global.sim_setting.bound_increment_stepsize;
+				achieved_delay_bound++;
 			}
 			NA_sub_MinCost(session_clients, client_assignment);
 		}
