@@ -45,7 +45,9 @@ for session_size, session_count in zip(session_size_list, session_count_list):
 	for metric_name in metric_name_list:   
 		axes[counter].boxplot(all_data[metric_name], labels=alg_name_list, showmeans=True)		  
 		axes[counter].set_xlabel('Algorithm', fontsize=18)
-		if 'data_transfer_cost' == metric_name:
+		if 'normalized_delay_bound' == metric_name:
+			metric_name += ''		
+		elif 'data_transfer_cost' == metric_name:
 			metric_name += ' (USD)'
 		elif 'alg_running_time' == metric_name:
 			metric_name += ' (msec)'

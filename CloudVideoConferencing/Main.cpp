@@ -44,7 +44,17 @@
 //	cout << (std::find(v2.begin(), v2.end(), 4) != v2.end());*/
 //
 //	//string s = "CP_1";
-//	//cout << (s.find("0") == std::string::npos);
+//	//cout << (s.find("0") == std::string::npos);	
+//
+//	/*vector<int> v(3, 1);
+//	list<int> l;
+//	cout << v.size() << "\n";
+//	l.assign(v.begin(), v.begin());
+//	cout << l.size() << "\n";*/
+//
+//	srand(time(NULL));
+//	vector<int> l({1, 2, 3, 4, 5});	
+//	random_shuffle(l.begin(), l.end());
 //}
 
 /*check whether inter-dc links have shorter latencies than other links*/
@@ -67,14 +77,14 @@ int main(int argc, char *argv[])
 	/*double recommended_delay_bound = 150;
 	double maximum_allowed_delay_bound = 300;*/
 	double bound_increment_stepsize = 1;
-	double session_count = 1000;
+	double session_count = 100;
 	std::cout << "common_settings\n";
 	/*std::cout << " | recommended_delay_bound: " << recommended_delay_bound << "\n";
 	std::cout << " | max_allowed_delay_bound: " << maximum_allowed_delay_bound << "\n";*/
 	std::cout << " | bound_increment_stepsize: " << bound_increment_stepsize << "\n";
 	std::cout << " | session_count: " << session_count << "\n";
 	
-	for (auto session_size : { 12 })
+	for (auto session_size : { 8, 12, 16 })
 	{
 		std::cout << " | session_size: " << session_size << "\n";
 		try
@@ -86,13 +96,10 @@ int main(int argc, char *argv[])
 						
 			Simulation sim = Simulation(Setting(session_size, bound_increment_stepsize, session_count));
 			sim.data_directory = ".\\Data\\";
-			sim.client_dc_latency_file = "ping_to_pl_median_matrix.csv";
+			sim.client_dc_latency_file = "ping_to_prefix_median_matrix.csv";
 			sim.output_directory = sim.data_directory + "Output\\";
-			sim.cluster_by_subregion = true;
-			sim.output_assignment = false;
-
 			sim.Initialize();			
-			for (auto alg_name : { "CP-1", "CP-2", "CP-3", "CP-4", "CP-5", "NA-all", "NA-sub"})
+			for (auto alg_name : { "NA-all-1", "NA-all-2", "NA-all-3", "CP-3", "NA-sub" })
 			{
 				sim.alg_to_run = alg_name;
 				std::cout << " | | alg_name: " << sim.alg_to_run << "\n";

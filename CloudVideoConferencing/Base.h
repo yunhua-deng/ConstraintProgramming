@@ -16,6 +16,7 @@
 #include <iomanip>
 #include <algorithm>
 #include <random>
+#include <cstdlib>
 #include <cmath>
 #include <ctime>
 #include <functional>

@@ -1,0 +1,11 @@
+achieved_delay_bound_avg,1.14557
+achieved_delay_bound_99th,1.3067
+data_transfer_cost_avg,2.52029
+data_transfer_cost_99th,3.48545
+interDC_cost_ratio_avg,0.026236
+interDC_cost_ratio_99th,0.0788763
+num_chosen_DCs_avg,1.82
+num_chosen_DCs_99th,3
+num_evaluated_solutions_avg,6319.34
+num_evaluated_solutions_99th,76871
+alg_running_time_avg,44.98
