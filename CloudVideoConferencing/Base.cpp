@@ -1,5 +1,60 @@
 #include "Base.h"
 
+bool operator<(const Path& p_x, const Path& p_y)
+{
+	if (p_x.sender < p_y.sender) return true;
+	else if (p_x.sender == p_y.sender)
+	{
+		if (p_x.receiver < p_y.receiver) return true;
+		else if (p_x.receiver == p_y.receiver)
+		{
+			if (p_x.dc_sender < p_y.dc_sender) return true;
+			else if (p_x.dc_sender == p_y.dc_sender) return p_x.dc_receiver < p_y.dc_receiver;
+			else return false;
+		}
+		else return false;
+	}
+	else return false;
+};
+
+bool operator==(const Path& p_x, const Path& p_y)
+{
+	return (p_x.sender == p_y.sender
+		&& p_x.dc_sender == p_y.dc_sender
+		&& p_x.dc_receiver == p_y.dc_receiver
+		&& p_x.receiver == p_y.receiver);
+};
+
+void PrintOutPath(const Path& p)
+{
+	std::cout << p.sender << "->" << p.dc_sender << "->" << p.dc_receiver << "->" << p.receiver << "\n";
+}
+
+bool operator==(const Client& c_x, const Client& c_y)
+{
+	return (c_x.id == c_y.id);
+};
+
+bool operator!=(const Client& c_x, const Client& c_y)
+{
+	return (c_x.id != c_y.id);
+}
+
+bool operator<(const Client& c_x, const Client& c_y)
+{
+	return (c_x.id < c_y.id);
+}
+
+bool ClientComparator_ByDomainSize(const Client& c_x, const Client& c_y)
+{
+	return (c_x.dc_domain.size() < c_y.dc_domain.size());
+}
+
+bool DatacenterComparator_ByExternalBandwidthPrice(const Datacenter& d_x, const Datacenter& d_y)
+{
+	return (d_x.external_bandwidth_price < d_y.external_bandwidth_price);
+}
+
 vector<vector<string>> ReadDelimitedTextFileIntoVector(const string input_file_name, const char delimiter, const bool skip_first_row)
 {
 	vector<vector<string>> strings_read;

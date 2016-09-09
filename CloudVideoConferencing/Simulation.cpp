@@ -1,58 +1,247 @@
 #include "Simulation.h"
 
-bool operator<(const Path& p_x, const Path& p_y)
+void Simulation::Initialize()
 {
-	if (p_x.sender < p_y.sender) return true;
-	else if (p_x.sender == p_y.sender)
-	{		
-		if (p_x.receiver < p_y.receiver) return true;
-		else if (p_x.receiver == p_y.receiver)
+	/*client_to_dc_delay_table, client_name_list*/
+	//ifstream data_file;
+	//data_file.open(data_directory + "rtt_client_to_dc.txt");
+	//if (data_file.is_open())
+	//{
+	//	string current_line;
+	//	while (getline(data_file, current_line))
+	//	{
+	//		stringstream entire_line(current_line);
+	//		string one_string;
+	//		vector<string> string_list;
+	//		while (entire_line >> one_string)
+	//		{
+	//			string_list.push_back(one_string);
+	//		}
+	//		if (string_list.size() >= 2)
+	//		{
+	//			global.client_name_list.push_back(string_list.at(0)); // the first string is the client name
+	//			vector<double> client_to_dc_delay_table_row;
+	//			for (size_t col = 1; col < string_list.size(); col++) // latency data starts from the 2nd column (so j starts from 1) and delay = 1/2 rtt
+	//			{
+	//				//if (col != 10 && col != 12) // skip 10th DC and 12th DC which are not available in DC-DC latency dataset
+	//				//{
+	//				//	client_to_dc_delay_table_row.push_back(stod(string_list.at(col)) / 2);
+	//				//}
+	//				client_to_dc_delay_table_row.push_back(stod(string_list.at(col)) / 2);
+	//			}
+	//			global.client_to_dc_delay_table.push_back(client_to_dc_delay_table_row);
+	//		}
+	//		else
+	//		{
+	//			std::printf("WARNING: bad \"rtt_client_to_dc\" file\n");
+	//		}
+	//	}
+	//	data_file.close();
+	//}
+	//else
+	//{
+	//	std::printf("WARNING: bad \"rtt_client_to_dc.txt\" file\n");
+	//}	
+
+	auto strings_read = ReadDelimitedTextFileIntoVector(data_directory + client_dc_latency_file, ',', true);
+	for (auto row : strings_read)
+	{
+		global.client_name_list.push_back(row.at(0));
+		vector<double> client_to_dc_delay_table_row;
+		for (auto col = 1; col < row.size(); col++)
 		{
-			if (p_x.dc_sender < p_y.dc_sender) return true;
-			else if (p_x.dc_sender == p_y.dc_sender) return p_x.dc_receiver < p_y.dc_receiver;
-			else return false;
-		}		
-		else return false;
+			client_to_dc_delay_table_row.push_back(stod(row.at(col)) / 2); // one-way delay = rtt / 2
+		}
+		global.client_to_dc_delay_table.push_back(client_to_dc_delay_table_row);
 	}
-	else return false;
-};
 
-bool operator==(const Path& p_x, const Path& p_y)
-{
-	return (p_x.sender == p_y.sender 
-		&& p_x.dc_sender == p_y.dc_sender 
-		&& p_x.dc_receiver == p_y.dc_receiver 
-		&& p_x.receiver == p_y.receiver);
-};
+	/*dc_to_dc_delay_table, dc_name_list*/
+	/*data_file.open(data_directory + "rtt_dc_to_dc.txt");
+	if (data_file.is_open())
+	{
+	string current_line;
+	while (getline(data_file, current_line))
+	{
+	stringstream entire_line(current_line);
+	string one_string;
+	vector<string> string_list;
+	while (entire_line >> one_string)
+	{
+	string_list.push_back(one_string);
+	}
 
-void PrintOutPath(const Path& p)
-{
-	std::cout << p.sender << "->" << p.dc_sender << "->" << p.dc_receiver << "->" << p.receiver << "\n";
-}
+	if (!string_list.empty())
+	{
+	vector<double> dc_to_dc_delay_table_row;
+	for (size_t col = 0; col < string_list.size(); col++)
+	{
+	dc_to_dc_delay_table_row.push_back(std::stod(string_list.at(col)) / 2);
+	}
+	global.dc_to_dc_delay_table.push_back(dc_to_dc_delay_table_row);
+	}
+	else
+	{
+	std::printf("WARNING: bad \"rtt_dc_to_dc.txt\" file\n");
+	}
+	}
+	data_file.close();
+	}
+	else
+	{
+	std::printf("WARNING: bad \"rtt_dc_to_dc.txt\" file\n");
+	}*/
 
-bool operator==(const Client& c_x, const Client& c_y)
-{
-	return (c_x.id == c_y.id);
-};
+	strings_read = ReadDelimitedTextFileIntoVector(data_directory + "ping_to_dc_median_matrix.csv", ',', true);
+	for (auto row : strings_read)
+	{
+		global.dc_name_list.push_back(row.at(0));
+		vector<double> dc_to_dc_delay_table_row;
+		for (auto col = 1; col < row.size(); col++)
+		{
+			dc_to_dc_delay_table_row.push_back(stod(row.at(col)) / 2); // one-way delay = rtt / 2
+		}
+		global.dc_to_dc_delay_table.push_back(dc_to_dc_delay_table_row);
+	}
 
-bool operator!=(const Client& c_x, const Client& c_y)
-{
-	return (c_x.id != c_y.id);
-}
+	/*dc_internal_bandwidth_price_list, dc_external_bandwidth_price_list, dc_server_rental_price_list*/
+	strings_read = ReadDelimitedTextFileIntoVector(data_directory + "pricing_bandwidth_server.csv", ',', true);
+	for (auto row : strings_read)
+	{
+		global.dc_internal_bandwidth_price_list.push_back(stod(row.at(1)));
+		global.dc_external_bandwidth_price_list.push_back(stod(row.at(2)));
+		global.dc_server_rental_price_list.push_back(stod(row.at(3)));
+	}
 
-bool operator<(const Client& c_x, const Client& c_y)
-{
-	return (c_x.id < c_y.id);
-}
+	/*create datacenter*/
+	const auto total_dc_count = global.dc_name_list.size();
+	for (size_t i = 0; i < total_dc_count; i++)
+	{
+		Datacenter d;
+		d.id = ID(i);
+		global.dc_id_list.push_back(d.id);
+		d.name = global.dc_name_list.at(i);
+		d.provider = d.name.substr(0, d.name.find_first_of("-")); // e.g. "ec2"
+		d.server_rental_price = global.dc_server_rental_price_list.at(i);
+		d.external_bandwidth_price = global.dc_external_bandwidth_price_list.at(i);
+		d.internal_bandwidth_price = global.dc_internal_bandwidth_price_list.at(i);
 
-bool ClientComparator_ByDomainSize(const Client& c_x, const Client& c_y)
-{
-	return (c_x.dc_domain.size() < c_y.dc_domain.size());
-}
+		global.datacenter[d.id] = d;
+	}
 
-bool DatacenterComparator_ByExternalBandwidthPrice(const Datacenter& d_x, const Datacenter& d_y)
-{
-	return (d_x.external_bandwidth_price < d_y.external_bandwidth_price);
+	/*create client and generate client_cluster*/
+	const auto total_client_count = global.client_name_list.size();
+	for (size_t i = 0; i < total_client_count; i++)
+	{
+		Client c;
+		c.id = ID(i);
+		global.client_id_list.push_back(c.id);
+		c.name = global.client_name_list.at(i); // client domain name
+
+		c.incoming_data_amount = 2; // 720p@30fps (streaming rate: 4Mbps)
+		c.outgoing_data_amount = c.incoming_data_amount / (global.sim_setting.session_size - 1);
+
+		for (auto& it : global.dc_id_list)
+		{
+			c.delay_to_dc[it] = global.client_to_dc_delay_table.at(c.id).at(it);
+		}
+		FindNearestDCs4Client(c, global.dc_id_list);
+
+		/*get subregion (e.g. "ec2-ap-northeast-1")*/
+		c.subregion = global.datacenter.at(c.nearest_dc).name;
+
+		/*get region (e.g. "ap")*/
+		auto pos = global.datacenter.at(c.nearest_dc).name.find_first_of("-");
+		c.region = global.datacenter.at(c.nearest_dc).name.substr(pos + 1, 2); // e.g. extract "ap" from "ec2-ap-northeast-1"
+
+		/*create clusters*/
+		if (cluster_by_subregion)
+		{
+			if (/*"ec2-sa-east-1" != c.subregion && */"ec2-ap-northeast-2" != c.subregion && "ec2-eu-west-1" != c.subregion)
+				global.client_cluster[c.subregion].push_back(c.id);
+		}
+		else
+		{
+			global.client_cluster[c.region].push_back(c.id);
+		}
+
+		/*record this client*/
+		global.client[c.id] = c;
+	}
+
+	// dump client cluster to disk	
+	_mkdir(output_directory.c_str()); // because _mkdir() only accepts const char*
+	string cluster_file_name = output_directory + "client_cluster.txt";
+	ofstream cluster_file(cluster_file_name);
+	if (cluster_file.is_open())
+	{
+		string one_line;
+		for (auto& it : global.client_cluster)
+		{
+			one_line = it.first + ",";
+			for (auto& c : it.second)
+			{
+				one_line += global.client.at(c).name + ",";
+			}
+			auto pos = one_line.find_last_of(",");
+			cluster_file << one_line.substr(0, pos) << "\n";
+		}
+		cluster_file.close();
+	}
+	else
+	{
+		std::cout << "\nfailed to create " << cluster_file_name << "\n";
+		std::cin.get();
+	}
+
+	/*make all_sessions according to client clusters*/
+	//srand(time(NULL));
+	srand(12345);
+	for (size_t i = 0; i < global.sim_setting.session_count; i++)
+	{
+		vector<ID> one_session;
+		GenerateOneSession(one_session); /*generate one session*/
+		all_sessions.push_back(one_session); /*append to the list*/
+	}
+
+	/*generate all non-empty dc subsets*/
+	vector<bool> x;
+	x.assign(global.dc_id_list.size(), false);
+	GenerateAllSubsets(global.dc_id_list, x, 0, all_dc_subsets);
+	std::sort(all_dc_subsets.begin(), all_dc_subsets.end(), SubsetComparatorBySize);
+
+	/*pre-compute path_length, it is memory-intensive: not applicable for large input sizes (e.g., > 1000 candidate clients)*/
+	/*Path one_path;
+	for (auto s : global.client_id_list)
+	{
+	one_path.sender = s;
+
+	for (auto r : global.client_id_list)
+	{
+	if (r != s)
+	{
+	one_path.receiver = r;
+
+	for (auto d_s : global.dc_id_list)
+	{
+	one_path.dc_sender = d_s;
+
+	for (auto d_r : global.dc_id_list)
+	{
+	one_path.dc_receiver = d_r;
+
+	double length = global.client_to_dc_delay_table.at(s).at(d_s)
+	+ global.dc_to_dc_delay_table.at(d_s).at(d_r)
+	+ global.client_to_dc_delay_table.at(r).at(d_r);
+
+	global.path_length[one_path] = length;
+	}
+	}
+	}
+	}
+	}*/
+
+	/*see if everything alright*/
+	//PrintGlobalInfo();
 }
 
 void Simulation::FindNearestDCs4Client(Client& the_client, const vector<ID>& dc_id_list)
@@ -482,251 +671,6 @@ double Simulation::CalculateAssignmentCost(const vector<Client>& session_clients
 
 	/*return total_cost*/
 	return total_cost;
-}
-
-void Simulation::Initialize()
-{
-	ifstream data_file;
-		
-	/*client_to_dc_delay_table, client_name_list*/
-	//data_file.open(data_directory + "rtt_client_to_dc.txt");
-	//if (data_file.is_open())
-	//{
-	//	string current_line;
-	//	while (getline(data_file, current_line))
-	//	{
-	//		stringstream entire_line(current_line);
-	//		string one_string;
-	//		vector<string> string_list;
-	//		while (entire_line >> one_string)
-	//		{
-	//			string_list.push_back(one_string);
-	//		}
-	//		if (string_list.size() >= 2)
-	//		{
-	//			global.client_name_list.push_back(string_list.at(0)); // the first string is the client name
-	//			vector<double> client_to_dc_delay_table_row;
-	//			for (size_t col = 1; col < string_list.size(); col++) // latency data starts from the 2nd column (so j starts from 1) and delay = 1/2 rtt
-	//			{
-	//				//if (col != 10 && col != 12) // skip 10th DC and 12th DC which are not available in DC-DC latency dataset
-	//				//{
-	//				//	client_to_dc_delay_table_row.push_back(stod(string_list.at(col)) / 2);
-	//				//}
-	//				client_to_dc_delay_table_row.push_back(stod(string_list.at(col)) / 2);
-	//			}
-	//			global.client_to_dc_delay_table.push_back(client_to_dc_delay_table_row);
-	//		}
-	//		else
-	//		{
-	//			std::printf("WARNING: bad \"rtt_client_to_dc\" file\n");
-	//		}
-	//	}
-	//	data_file.close();
-	//}
-	//else
-	//{
-	//	std::printf("WARNING: bad \"rtt_client_to_dc.txt\" file\n");
-	//}	
-
-	auto strings_read = ReadDelimitedTextFileIntoVector(data_directory + client_dc_latency_file, ',', true);	
-	for (auto row : strings_read)
-	{
-		global.client_name_list.push_back(row.at(0));
-		vector<double> client_to_dc_delay_table_row;
-		for (auto col = 1; col < row.size(); col++)
-		{
-			client_to_dc_delay_table_row.push_back(stod(row.at(col)) / 2); // one-way delay = rtt / 2
-		}
-		global.client_to_dc_delay_table.push_back(client_to_dc_delay_table_row);
-	}
-		
-	/*dc_to_dc_delay_table, dc_name_list*/
-	/*data_file.open(data_directory + "rtt_dc_to_dc.txt");
-	if (data_file.is_open())
-	{
-		string current_line;
-		while (getline(data_file, current_line))
-		{
-			stringstream entire_line(current_line);
-			string one_string;
-			vector<string> string_list;
-			while (entire_line >> one_string)
-			{
-				string_list.push_back(one_string);
-			}
-
-			if (!string_list.empty())
-			{
-				vector<double> dc_to_dc_delay_table_row;
-				for (size_t col = 0; col < string_list.size(); col++)
-				{
-					dc_to_dc_delay_table_row.push_back(std::stod(string_list.at(col)) / 2);
-				}
-				global.dc_to_dc_delay_table.push_back(dc_to_dc_delay_table_row);
-			}
-			else
-			{
-				std::printf("WARNING: bad \"rtt_dc_to_dc.txt\" file\n");
-			}
-		}
-		data_file.close();
-	}
-	else
-	{
-		std::printf("WARNING: bad \"rtt_dc_to_dc.txt\" file\n");
-	}*/
-	
-	strings_read = ReadDelimitedTextFileIntoVector(data_directory + "ping_to_dc_median_matrix.csv", ',', true);
-	for (auto row : strings_read)
-	{
-		global.dc_name_list.push_back(row.at(0));
-		vector<double> dc_to_dc_delay_table_row;
-		for (auto col = 1; col < row.size(); col++)
-		{
-			dc_to_dc_delay_table_row.push_back(stod(row.at(col)) / 2); // one-way delay = rtt / 2
-		}
-		global.dc_to_dc_delay_table.push_back(dc_to_dc_delay_table_row);
-	}
-
-	/*dc_internal_bandwidth_price_list, dc_external_bandwidth_price_list, dc_server_rental_price_list*/
-	strings_read = ReadDelimitedTextFileIntoVector(data_directory + "pricing_bandwidth_server.csv", ',', true);
-	for (auto row : strings_read)
-	{		
-		global.dc_internal_bandwidth_price_list.push_back(stod(row.at(1)));
-		global.dc_external_bandwidth_price_list.push_back(stod(row.at(2)));
-		global.dc_server_rental_price_list.push_back(stod(row.at(3)));
-	}
-
-	/*create datacenter*/
-	const auto total_dc_count = global.dc_name_list.size();
-	for (size_t i = 0; i < total_dc_count; i++)
-	{
-		Datacenter d;
-		d.id = ID(i);
-		global.dc_id_list.push_back(d.id);
-		d.name = global.dc_name_list.at(i);
-		d.provider = d.name.substr(0, d.name.find_first_of("-")); // e.g. "ec2"
-		d.server_rental_price = global.dc_server_rental_price_list.at(i);
-		d.external_bandwidth_price = global.dc_external_bandwidth_price_list.at(i);
-		d.internal_bandwidth_price = global.dc_internal_bandwidth_price_list.at(i);
-		
-		global.datacenter[d.id] = d;
-	}
-
-	/*create client and generate client_cluster*/
-	const auto total_client_count = global.client_name_list.size();
-	for (size_t i = 0; i < total_client_count; i++)
-	{
-		Client c;
-		c.id = ID(i);
-		global.client_id_list.push_back(c.id);
-		c.name = global.client_name_list.at(i); // client domain name
-		
-		c.incoming_data_amount = 2; // 720p@30fps (streaming rate: 4Mbps)
-		c.outgoing_data_amount = c.incoming_data_amount / (global.sim_setting.session_size - 1);
-
-		for (auto& it : global.dc_id_list) 
-		{					
-			c.delay_to_dc[it] = global.client_to_dc_delay_table.at(c.id).at(it);			
-		}
-		FindNearestDCs4Client(c, global.dc_id_list);
-				
-		/*get subregion (e.g. "ec2-ap-northeast-1")*/
-		c.subregion = global.datacenter.at(c.nearest_dc).name;
-
-		/*get region (e.g. "ap")*/
-		auto pos = global.datacenter.at(c.nearest_dc).name.find_first_of("-");
-		c.region = global.datacenter.at(c.nearest_dc).name.substr(pos + 1, 2); // e.g. extract "ap" from "ec2-ap-northeast-1"
-		
-		/*create clusters*/
-		if (cluster_by_subregion)
-		{
-			if (/*"ec2-sa-east-1" != c.subregion && */"ec2-ap-northeast-2" != c.subregion && "ec2-eu-west-1" != c.subregion)
-				global.client_cluster[c.subregion].push_back(c.id);
-		}
-		else
-		{
-			global.client_cluster[c.region].push_back(c.id);
-		}
-		
-		/*record this client*/
-		global.client[c.id] = c;
-	}
-
-	// dump client cluster to disk	
-	_mkdir(output_directory.c_str()); // because _mkdir() only accepts const char*
-	string cluster_file_name = output_directory + "client_cluster.txt";
-	ofstream cluster_file(cluster_file_name);
-	if (cluster_file.is_open())
-	{
-		string one_line;
-		for (auto& it : global.client_cluster)
-		{				
-			one_line = it.first + ",";
-			for (auto& c : it.second)
-			{				
-				one_line += global.client.at(c).name + ",";
-			}
-			auto pos = one_line.find_last_of(",");			
-			cluster_file << one_line.substr(0, pos) << "\n";
-		}
-		cluster_file.close();
-	}
-	else
-	{
-		std::cout << "\nfailed to create " << cluster_file_name << "\n";
-		std::cin.get();
-	}
-	
-	/*make all_sessions according to client clusters*/
-	//srand(time(NULL));
-	srand(12345);
-	for (size_t i = 0; i < global.sim_setting.session_count; i++)
-	{	
-		vector<ID> one_session;
-		GenerateOneSession(one_session); /*generate one session*/
-		all_sessions.push_back(one_session); /*append to the list*/
-	}
-
-	/*generate all non-empty dc subsets*/
-	vector<bool> x;
-	x.assign(global.dc_id_list.size(), false);
-	GenerateAllSubsets(global.dc_id_list, x, 0, all_dc_subsets);
-	std::sort(all_dc_subsets.begin(), all_dc_subsets.end(), SubsetComparatorBySize);
-
-	/*pre-compute path_length, it is memory-intensive: not applicable for large input sizes (e.g., > 1000 candidate clients)*/
-	/*Path one_path;
-	for (auto s : global.client_id_list)
-	{
-		one_path.sender = s;
-
-		for (auto r : global.client_id_list)
-		{
-			if (r != s)
-			{
-				one_path.receiver = r;
-
-				for (auto d_s : global.dc_id_list)
-				{
-					one_path.dc_sender = d_s;
-
-					for (auto d_r : global.dc_id_list)
-					{
-						one_path.dc_receiver = d_r;
-
-						double length = global.client_to_dc_delay_table.at(s).at(d_s)
-							+ global.dc_to_dc_delay_table.at(d_s).at(d_r)
-							+ global.client_to_dc_delay_table.at(r).at(d_r);
-						
-						global.path_length[one_path] = length;
-					}
-				}
-			}
-		}
-	}*/
-
-	/*see if everything alright*/
-	//PrintGlobalInfo();
 }
 
 double Simulation::CalculatePathLength(const Path& path)
