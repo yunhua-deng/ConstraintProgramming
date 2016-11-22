@@ -142,11 +142,11 @@
   <ItemGroup>
     <ClCompile Include="Base.cpp" />
     <ClCompile Include="Main.cpp" />
-    <ClCompile Include="Simulation.cpp" />
+    <ClCompile Include="CloudVideoConferencing.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Base.h" />
-    <ClInclude Include="Simulation.h" />
+    <ClInclude Include="CloudVideoConferencing.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Data\client_cluster" />
