@@ -57,58 +57,36 @@
 //	random_shuffle(l.begin(), l.end());
 //}
 
-int main()
-{
-	auto sim = CloudVideoConferencingProblem::SimulationBase(CloudVideoConferencingProblem::Setting(0, 0));
-	sim.Initialize();
-	sim.Get_DelayToNearestDc_CDF();
+using namespace CloudVideoConferencingProblem;
+/*argc: number of strings in array argv (at least 1);
+argv[]: array of command-line argument strings (start from 1 because 0 is the function name)*/
+int main(int argc, char *argv[])
+{	
+	/*auto obj = DatasetAnalysis();	
+	obj.Get_DelayToNearestDc_CDF();
+	obj.Get_ShortestPathLength_CDF();*/
+	
+	auto OL1 = OptimizingLatencyFirst();
+	std::thread th_OL1 = std::thread(&OptimizingLatencyFirst::Simulate, &OL1, Setting(8, 500));
+	auto OL2 = OptimizingLatencyFirst();
+	std::thread th_OL2 = std::thread(&OptimizingLatencyFirst::Simulate, &OL2, Setting(12, 500));
+	auto OL3 = OptimizingLatencyFirst();
+	std::thread th_OL3 = std::thread(&OptimizingLatencyFirst::Simulate, &OL3, Setting(16, 500));	
+	
+	/*auto OC1 = OptimizingCostByTradingOffLatency();
+	std::thread th_OC1 = std::thread(&OptimizingCostByTradingOffLatency::Simulate, &OC1, Setting(8, 500));
+	auto OC2 = OptimizingCostByTradingOffLatency();
+	std::thread th_OC2 = std::thread(&OptimizingCostByTradingOffLatency::Simulate, &OC2, Setting(12, 500));	
+	auto OC3 = OptimizingCostByTradingOffLatency();
+	std::thread th_OC3 = std::thread(&OptimizingCostByTradingOffLatency::Simulate, &OC3, Setting(16, 500));*/
+		
+	th_OL1.join();
+	th_OL2.join();
+	th_OL3.join();
+
+	/*th_OC1.join();
+	th_OC2.join();
+	th_OC3.join();*/
 
 	return 0;
 }
-
-/*argc: number of strings in array argv (at least 1); 
-argv[]: array of command-line argument strings (start from 1 because 0 is the function itself)*/
-//int main(int argc, char *argv[])
-//{	
-//	/*double recommended_delay_bound = 150;
-//	double maximum_allowed_delay_bound = 300;*/	
-//	double session_count = 1000;
-//	std::cout << "common_settings\n";
-//	/*std::cout << " | recommended_delay_bound: " << recommended_delay_bound << "\n";
-//	std::cout << " | max_allowed_delay_bound: " << maximum_allowed_delay_bound << "\n";*/	
-//	std::cout << " | session_count: " << session_count << "\n";
-//	
-//	for (auto session_size : { 4, 8, 12, 16 })
-//	{
-//		std::cout << " | session_size: " << session_size << "\n";
-//		try
-//		{
-//			if (/*recommended_delay_bound < 1 || */session_size < 2 || session_count < 1)
-//			{
-//				throw "bad simulation parameters\n";
-//			}
-//						
-//			Simulation sim = Simulation(Setting(session_size, session_count));
-//			sim.data_directory = ".\\Data\\";			
-//			sim.output_directory = sim.data_directory + "Output\\";
-//			sim.Initialize();			
-//			//for (auto alg_name : { "CP-3", "NA-all-1", "NA-all-2", "NA-sub" })
-//			for (auto alg_name : { "CP-2", "CP-3", "CP-4", "CP-5" })
-//			{
-//				sim.alg_to_run = alg_name;
-//				std::cout << " | | alg_name: " << sim.alg_to_run << "\n";
-//				sim.Run();
-//			}
-//		}
-//		catch (exception& e) // standard exceptions
-//		{
-//			std::cerr << e.what() << "\n";
-//		}
-//		catch (const char* msg) // customized exceptions
-//		{
-//			std::cerr << msg;
-//		}
-//	}
-//
-//	return 0;
-//}

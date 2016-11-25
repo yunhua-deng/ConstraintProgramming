@@ -31,19 +31,18 @@ namespace CloudVideoConferencingProblem
 	{
 		ID id;
 		string name;
-		double outgoing_data_amount;
-		double incoming_data_amount;
+		double outgoing_data_amount = 0;
+		double incoming_data_amount = 0;
 		ID nearest_dc;
 		vector<ID> ranked_dc_list;
 		string region;
 		string subregion;
+		
+		list<ID> dc_domain; // i.e., the list of assignment options, using list (rather than vector) for deletion of elements
+		ID cheapest_dc;		
 
-		map<ID, vector<Path>> path_to_client; // memory-intensive (not applicable to large input size)
-		map<ID, Path> shortest_path_to_client;
-
-		list<ID> dc_domain; // using list (rather than vector) for efficient deletion of elements in the middle in constraint propogation
-		ID cheapest_dc;
-		ID assigned_dc;
+		//map<ID, vector<Path>> path_to_client; // memory-intensive (not applicable to large input size)
+		//map<ID, Path> shortest_path_to_client;
 	};
 	bool operator==(const Client&, const Client&);
 	bool operator!=(const Client&, const Client&);
@@ -63,10 +62,10 @@ namespace CloudVideoConferencingProblem
 
 	struct Setting
 	{		
-		double session_size;
-		double session_count;
+		size_t session_size;
+		size_t session_count;
 
-		Setting(double given_session_size, double given_session_count)
+		Setting(size_t given_session_size, size_t given_session_count)
 		{
 			session_size = given_session_size;
 			session_count = given_session_count;
@@ -78,9 +77,7 @@ namespace CloudVideoConferencingProblem
 	struct Global
 	{
 		string data_directory = ".\\Data\\";
-		string output_directory = data_directory + "Output\\";
-
-		Setting sim_setting;
+		string output_directory = data_directory + "Output\\";		
 
 		vector<vector<double>> client_to_dc_delay_table;
 		vector<vector<double>> dc_to_dc_delay_table;
@@ -95,94 +92,87 @@ namespace CloudVideoConferencingProblem
 		map<ID, Datacenter> datacenter;
 		vector<vector<ID>> all_dc_subsets;
 		map<ID, Client> client;
-		map<string, vector<ID>> client_cluster;
-		vector<vector<Client>> all_sessions;
+		map<string, vector<ID>> client_cluster;		
 	};
 
 	class SimulationBase
-	{
-	public:
-		SimulationBase(Setting given_sim_setting) {	global.sim_setting = given_sim_setting;	}		
+	{	
+	protected:
 		void Initialize();
-		void Check_InterDcNetwork_Advantage();
-		void Get_DelayToNearestDc_CDF();
+		bool isInitialized = false;
+		Global global;
 
-	protected:		
-		Global global;		
-		
 		void RankDatacenters4Client(Client&, const vector<ID>&);
+		int GetAssignedDcRanking(const Client&, const ID);
+				
+		//void FindShortestPaths(vector<Client>&, const vector<ID>&); /*only applicable to small client_list input*/
+		//void FindAllPaths(vector<Client>&, const vector<ID>&); /*only applicable to small client_list input*/
+						
+		double GetPathLength(const Path&);
+		double GetShortestPathLengthOfClientPair(const Client &, const Client &, const vector<ID> &);
 
-		void FindShortestPaths(vector<Client>&, const vector<ID>&);
-		void FindAllPaths(vector<Client>&, const vector<ID>&);
-		
-		void GenerateOneSession(vector<ID>&);
-		void GenerateOneSessionWithTwoRegion(vector<ID>&);
-		
-		double GetPathLength(const Path&);		
-
-		double GetSessionDelayLowerBound(const vector<Client> &);
-		double GetSessionDelayUpperBound(const vector<Client> &);
+		double GetSessionLatencyLowerBound(const vector<Client> &);
 		double GetSessionCostLowerBound(const vector<Client> &);
 
-		double GetSessionDelayAfterAssignment(const vector<Client>&, const vector<ID>&);
+		double GetSessionLatencyAfterAssignment(const vector<Client>&, const vector<ID>&);
 		double GetSessionCostAfterAssignment(const vector<Client>&, const vector<ID>&);
 				
-		void PrintGlobalInfo();
-		void PrintClientDomain(const Client &);
-				
-		double path_length_constraint; // i.e., the maximum allowed one-way latency between any client pair		
-		void InitializeDomains4Clients(vector<Client> &, size_t top_k = 0); // if top_k == 0, then all dc's are put into each client's domain, otherwise, only consider top_k dc's (k-nearest dc's)
-		double num_discovered_solutions;
+		vector<ID> GenerateOneSession(const size_t);
+		vector<ID> GenerateOneSessionWithTwoRegion(const size_t);
+		vector<vector<Client>> GenerateRandomSessions(const Setting &);
 
-		/*constraint propagation*/
-		bool EnforceLocalConsistency(vector<Client> &);
+		/*constraint programming stuff*/		
 		bool EnforceNodeConsistency(vector<Client> &);
 		bool EnforceArcConsistency(vector<Client> &);
 		bool ArcReduce(Client &, const Client &);
+		bool EnforceLocalConsistency(vector<Client> &);	
+		void AssignClient(const vector<Client> &, const size_t, vector<ID> &, const bool first_solution_only);
 
-		/*backtracking search (delay) and optimization (cost)*/
-		bool IsValidPartialSolution(const vector<Client> &, const size_t, const vector<ID> &, const ID, const size_t);
-		bool IsWorthyExtension(const vector<Client> &, const size_t, vector<ID> &, const ID, const double);
-		double IsValidPartialSolution_false_counter;
-		double IsWorthyExtension_false_counter;
-		void AssignClient_ConstraintSatisfaction4Delay(vector<Client>&, const size_t, vector<ID>&, const size_t);
-		void ConstraintSatisfaction4Delay(vector<Client>&, vector<ID>&, const size_t);
-		void AssignClient_ConstrainedOptimization4Cost(vector<Client>&, const size_t, vector<ID>&, const size_t, double&, vector<ID>&);
-		void ConstrainedOptimization4Cost(vector<Client>&, vector<ID>&, const size_t);
+		/*utility stuff for backtracking search*/
+		void InitializeDomains4Clients(vector<Client> &, const size_t top_k = 0); // if top_k is 0, then all dc's are put into each client's domain, otherwise, only consider top_k dc's (k-nearest dc's)
+		void FindCheapestDcInDomain4Clients(vector<Client> &);
+		bool IsValidPartialSolution(const vector<Client> &, const size_t, const vector<ID> &, const ID);
+		bool IsWorthExtension(const vector<Client> &, const size_t, const vector<ID> &, const ID, const double);
+		double path_length_constraint; // i.e., the allowed maximum one-way latency between any client pair (also it is the latency objective)
+		size_t solution_cardinality_constraint = 0; // i.e., the allowed maximum number of datacenters appearing in the solution (if it is 0, this constraint is ignored)		
+		size_t num_discovered_solutions = 0; // always remember to reset it to 0
+		double optimal_cost;
+		vector<ID> optimal_solution;
 	};
 
-	class OptimizationProblem : public SimulationBase
+	class DatasetAnalysis : public SimulationBase
 	{
-	public:				
-		bool output_assignment = false;		
-		string alg_to_run;
-		void Run();
-		void Run_CostOptimization(const string);
+	public:
+		void Get_ClientCluster_Info();
+		void Check_InterDcNetwork_Advantage();
+		void Get_DelayToNearestDc_CDF();
+		void Get_ShortestPathLength_CDF();
+	};
+
+	class OptimizingCostByTradingOffLatency : public SimulationBase
+	{
+	public:		
+		void Simulate(const Setting &);
+		string local_output_directory = "OptimizingCostByTradingOffLatency\\";
 
 	private:
-				
-		/*other algorithms*/		
-		void NA_all(vector<Client>&, vector<ID>&, const size_t);
-		void NA_all_CostOptimization(vector<Client>&, vector<ID>&, const size_t);
-		void NA_sub(vector<Client>&, vector<ID>&);
-		void NA_sub_CostOptimization(vector<Client>&, vector<ID>&);
-		//void Random(vector<ID>&);
 		
-		/*some utility functions*/		
-		void OutputPerformanceData();
-		void OutputAssignmentOfOneSession(const int, const vector<Client>&);
-		void ResetPerformanceDataStorage();
+		/*CP*/
+		void CP(vector<Client> &, const double);		
+	};
 
-		/*the following are performance metrics*/		
-		double traffic_cost;
-		double interDC_cost_ratio;
-		double num_of_chosen_DCs;
-		double alg_running_time;
-		vector<double> achieved_delay_bound_all_sessions;
-		vector<double> traffic_cost_all_sessions;
-		vector<double> interDC_cost_ratio_all_sessions;
-		vector<double> num_of_chosen_DCs_all_sessions;
-		vector<double> num_discovered_solutions_all_sessions;
-		vector<double> alg_running_time_all_sessions;
+	class OptimizingLatencyFirst : public SimulationBase
+	{
+	public:
+		void Simulate(const Setting &);
+		string local_output_directory = "OptimizingLatencyFirst\\";
+
+	private:
+
+		/*CP*/
+		void CP(vector<Client> &);
+
+		/*NA*/
+		vector<ID> NearestAssignment(vector<Client>);
 	};
 }

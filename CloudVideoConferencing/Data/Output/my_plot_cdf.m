@@ -1,78 +1,83 @@
-%%
+%% CDF_DelayToNearestDC
 ss = get(0, 'ScreenSize');
-set(gcf, 'Position', [ss(1) ss(2) ss(3)/4 ss(4)/4]);
-data = importdata('CDF_DelayToNearestDC.csv');
+set(gcf, 'Position', [ss(1) ss(2) ss(3)/4 ss(4)/3]);
+%data = importdata('CDF_DelayToNearestDC.txt'); % importdata() is memory-intensive
+data = dlmread('CDF_DelayToNearestDC.txt');
 p_h = cdfplot(data);
 set(gca, 'fontsize', 10);
 set(p_h, 'LineStyle', '-', 'LineWidth', 2, 'Color', 'b');
-xlabel('Latency (one-way) to its nearest datacenter (msec)', 'FontSize', 12);
+xlabel('Latency (one-way) to its nearest datacenter [ms]', 'FontSize', 12);
 ylabel('CDF of prefixes', 'FontSize', 12);
 title('');
 grid on;
 export_fig CDF_DelayToNearestDC.pdf -transparent
 
-%% eligible RDatacenter count cdf (basic problem) seperate session sizes (10 and 50 only)
-L_G = [75 150];
-L_R = [50 100];
-
-legend_name = repmat('', 2, 1);
-line_style = {'-', ':'};
-
+%% CDF_ShortestPathLength
 ss = get(0, 'ScreenSize');
-set(gcf, 'Position', [ss(1) ss(2) ss(3)/2 ss(4)/3]);
+set(gcf, 'Position', [ss(1) ss(2) ss(3)/4 ss(4)/3]);
+data = dlmread('CDF_ShortestPathLength.txt');
+p_h = cdfplot(data);
+set(gca, 'fontsize', 10);
+set(p_h, 'LineStyle', '-', 'LineWidth', 2, 'Color', 'b');
+xlabel('Latency (one-way) of shortest path [ms]', 'FontSize', 12);
+ylabel('CDF of shortest paths', 'FontSize', 12);
+title('');
+grid on;
+export_fig CDF_ShortestPathLength.pdf -transparent
+pdf -transparent
+
+%% CDF_SolutionCardinality
+ss = get(0, 'ScreenSize');
+set(gcf, 'Position', [ss(1) ss(2) ss(3)/1.2 ss(4)/3]);
 pos = 0;
-for size = [10 50]
+for size = [8 12 16]
     pos = pos + 1;
-    subplot(1, 2, pos);
-    for i = 1:2
-        data = importdata(sprintf('%d_%d_%d_eligibleRDatacenterCount.csv', L_G(i), L_R(i), size));
-        p_h = cdfplot(data);    
-        hold on;
-        set(p_h, 'LineStyle', line_style{i}, 'LineWidth', 3, 'Color', 'k'); 
-        legend_name{i} = sprintf('(L_G = %d, L_R = %d)', L_G(i)*2, L_R(i)*2);
-    end
-    set(gca, 'XLim', [0 10]);
-    set(gca, 'XTick', [0 1 2 3 4 5 6 7 8 9 10]); 
-    set(gca, 'fontsize', 14);
-    lh = legend(legend_name, 'Orientation', 'vertical', 'Location', 'best');
+    subplot(1, 3, pos);
+    
+    data = dlmread(sprintf('sessionSize[%d]_solutionCardinality_CDF.csv', size));
+    p_h = cdfplot(data(1, :));    
+    set(p_h, 'LineStyle', '-', 'LineWidth', 2, 'Color', 'b');
+    hold on;
+    p_h = cdfplot(data(2, :));
+    set(p_h, 'LineStyle', '-.', 'LineWidth', 2, 'Color', 'r');
+    
+    lh = legend('NA', 'CP', 'Orientation', 'vertical', 'Location', 'southeast');
     set(lh, 'FontSize', 12);
-    xlabel('Number of eligible datacenters per client', 'FontSize', 14);
-    ylabel('Cumulative distribution function', 'FontSize', 14);   
-    title(sprintf('|C| = %d', size));
-    grid on;
+    
+    xlabel('Solution cardinality (# of unique datacenters)', 'FontSize', 12);
+    ylabel('CDF of sessions', 'FontSize', 12);
+    title(sprintf('Session size: %d', size));
+    
+    set(gca, 'fontsize', 10);
+    set(gca, 'XLim', [1 9]);
+    set(gca, 'XTick', [1 2 3 4 5 6 7 8 9]);
+    
+    box on;
+    grid on;  
     hold off;
 end
-export_fig cdf_rs_basic.pdf -transparent
+export_fig CDF_SolutionCardinality.pdf -transparent
 
-%% eligible GDatacenter count cdf (general problem) seperate session sizes (10 and 50 only)
-L_G = [75 150];
-L_R = [50 100];
-
-legend_name = repmat('', 2, 1);
-line_style = {'-', ':'};
-
+%% CDF_AssignedDcRanking
 ss = get(0, 'ScreenSize');
-set(gcf, 'Position', [ss(1) ss(2) ss(3)/2 ss(4)/3]);
+set(gcf, 'Position', [ss(1) ss(2) ss(3)/1.2 ss(4)/3]);
 pos = 0;
-for size = [10 50]
+for size = [8 12 16]
     pos = pos + 1;
-    subplot(1, 2, pos);
-    for i = 1:2
-        data = importdata(sprintf('%d_%d_%d_eligibleGDatacenterCount.csv', L_G(i), L_R(i), size));
-        p_h = cdfplot(data);    
-        hold on;
-        set(p_h, 'LineStyle', line_style{i}, 'LineWidth', 3, 'Color', 'k'); 
-        legend_name{i} = sprintf('(L_G = %d, L_R = %d)', L_G(i)*2, L_R(i)*2);
-    end
-    set(gca, 'XLim', [0 13]);
-    set(gca, 'XTick', [0 1 2 3 4 5 6 7 8 9 10 11 12 13]);    
-    set(gca, 'fontsize', 14);
-    lh = legend(legend_name, 'Orientation', 'vertical', 'Location', 'best');
-    set(lh, 'FontSize', 12);
-    xlabel('Number of eligible datacenters for the G-server', 'FontSize', 14);
-    ylabel('Cumulative distribution function', 'FontSize', 14);
-    title(sprintf('|C| = %d', size));
+    subplot(1, 3, pos);    
+    data = dlmread(sprintf('sessionSize[%d]_assignedDcRanking_CDF.csv', size));
+    p_h = cdfplot(data);    
+    set(p_h, 'LineStyle', '-.', 'LineWidth', 2, 'Color', 'r');  
+    
+    xlabel('Ranking of its assigned datacenter', 'FontSize', 12);
+    ylabel('CDF of clients in all sessions for CP', 'FontSize', 12);
+    title(sprintf('Session size: %d', size));
+    
+    set(gca, 'fontsize', 10);
+    set(gca, 'XLim', [1 11]);
+    set(gca, 'XTick', [1 2 3 4 5 6 7 8 9 10 11]);
+    
+    box on;
     grid on;   
-    hold off;
 end
-export_fig cdf_gs_general.pdf -transparent
+export_fig CDF_AssignedDcRanking.pdf -transparent
