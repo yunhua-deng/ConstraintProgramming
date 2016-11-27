@@ -65,7 +65,7 @@ namespace CloudVideoConferencingProblem
 		size_t session_size;
 		size_t session_count;
 
-		Setting(size_t given_session_size, size_t given_session_count)
+		Setting(const size_t given_session_size, const size_t given_session_count)
 		{
 			session_size = given_session_size;
 			session_count = given_session_count;
@@ -95,6 +95,47 @@ namespace CloudVideoConferencingProblem
 		map<string, vector<ID>> client_cluster;		
 	};
 
+	struct Solution
+	{		
+		double latency;
+		double cost;
+		int cardinality;
+		vector<int> assignedDc_ranking;
+	};
+
+	struct Result
+	{
+		map<string, vector<double>> latency_result;
+		map<string, vector<double>> cost_result;
+		map<string, vector<int>> cardinality_result;
+		map<string, vector<int>> assignedDc_ranking_result;
+
+		Result(const vector<string> algName_list)
+		{
+			for (string algName : algName_list)
+			{
+				latency_result.insert(std::pair<string, vector<double>>(algName, vector<double>()));
+				cost_result.insert(std::pair<string, vector<double>>(algName, vector<double>()));
+				cardinality_result.insert(std::pair<string, vector<int>>(algName, vector<int>()));
+				assignedDc_ranking_result.insert(std::pair<string, vector<int>>(algName, vector<int>()));
+			}
+		}
+	};
+
+	struct Constraint
+	{	
+		size_t client_domain_constraint; // if top_k is 0, then all dc's are put into each client's domain, otherwise, only consider top_k dc's (k-nearest dc's)
+		size_t solution_cardinality_constraint; // i.e., the allowed maximum number of datacenters appearing in the solution (if it is 0, this constraint is ignored)
+
+		Constraint(const size_t client_domain_constraint_in, const size_t solution_cardinality_constraint_in)
+		{
+			client_domain_constraint = client_domain_constraint_in;
+			solution_cardinality_constraint = solution_cardinality_constraint_in;
+		}
+
+		Constraint() {}
+	};
+
 	class SimulationBase
 	{	
 	protected:
@@ -114,30 +155,34 @@ namespace CloudVideoConferencingProblem
 		double GetSessionLatencyLowerBound(const vector<Client> &);
 		double GetSessionCostLowerBound(const vector<Client> &);
 
-		double GetSessionLatencyAfterAssignment(const vector<Client>&, const vector<ID>&);
-		double GetSessionCostAfterAssignment(const vector<Client>&, const vector<ID>&);
+		double GetSessionLatencyAfterAssignment(const vector<Client> &, const vector<ID> &);		
+		double GetSessionCostAfterAssignment(const vector<Client> &, const vector<ID> &);		
 				
+		Solution GetSolutionInfoAfterAssignment(const vector<Client> &, const vector<ID> &);
+
 		vector<ID> GenerateOneSession(const size_t);
 		vector<ID> GenerateOneSessionWithTwoRegion(const size_t);
 		vector<vector<Client>> GenerateRandomSessions(const Setting &);
 
-		/*constraint programming stuff*/		
+		/*CP stuff*/		
 		bool EnforceNodeConsistency(vector<Client> &);
 		bool EnforceArcConsistency(vector<Client> &);
 		bool ArcReduce(Client &, const Client &);
 		bool EnforceLocalConsistency(vector<Client> &);	
 		void AssignClient(const vector<Client> &, const size_t, vector<ID> &, const bool first_solution_only);
-
-		/*utility stuff for backtracking search*/
-		void InitializeDomains4Clients(vector<Client> &, const size_t top_k = 0); // if top_k is 0, then all dc's are put into each client's domain, otherwise, only consider top_k dc's (k-nearest dc's)
+		void InitializeDomains4Clients(vector<Client> &);
 		void FindCheapestDcInDomain4Clients(vector<Client> &);
 		bool IsValidPartialSolution(const vector<Client> &, const size_t, const vector<ID> &, const ID);
-		bool IsWorthExtension(const vector<Client> &, const size_t, const vector<ID> &, const ID, const double);
-		double path_length_constraint; // i.e., the allowed maximum one-way latency between any client pair (also it is the latency objective)
-		size_t solution_cardinality_constraint = 0; // i.e., the allowed maximum number of datacenters appearing in the solution (if it is 0, this constraint is ignored)		
+		bool IsWorthExtension(const vector<Client> &, const size_t, const vector<ID> &, const ID, const double);				
+		double path_length_constraint; // i.e., the allowed maximum one-way latency between any client pair
+		Constraint extraConstraintSet;
 		size_t num_discovered_solutions = 0; // always remember to reset it to 0
 		double optimal_cost;
-		vector<ID> optimal_solution;
+		vector<ID> optimal_assignment;		
+
+		/*baseline methods*/
+		Solution NearestAssignment(vector<Client>);
+		Solution SingleDatacenter(vector<Client>);
 	};
 
 	class DatasetAnalysis : public SimulationBase
@@ -155,9 +200,7 @@ namespace CloudVideoConferencingProblem
 		void Simulate(const Setting &);
 		string local_output_directory = "OptimizingCostByTradingOffLatency\\";
 
-	private:
-		
-		/*CP*/
+	private:				
 		void CP(vector<Client> &, const double);		
 	};
 
@@ -168,11 +211,6 @@ namespace CloudVideoConferencingProblem
 		string local_output_directory = "OptimizingLatencyFirst\\";
 
 	private:
-
-		/*CP*/
-		void CP(vector<Client> &);
-
-		/*NA*/
-		vector<ID> NearestAssignment(vector<Client>);
+		Solution CP(vector<Client>, const Constraint & input_extraConstraintSet = Constraint(0, 0));
 	};
 }

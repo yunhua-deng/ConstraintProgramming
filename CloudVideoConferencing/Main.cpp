@@ -66,27 +66,28 @@ int main(int argc, char *argv[])
 	obj.Get_DelayToNearestDc_CDF();
 	obj.Get_ShortestPathLength_CDF();*/
 	
-	auto OL1 = OptimizingLatencyFirst();
-	std::thread th_OL1 = std::thread(&OptimizingLatencyFirst::Simulate, &OL1, Setting(8, 500));
-	auto OL2 = OptimizingLatencyFirst();
-	std::thread th_OL2 = std::thread(&OptimizingLatencyFirst::Simulate, &OL2, Setting(12, 500));
-	auto OL3 = OptimizingLatencyFirst();
-	std::thread th_OL3 = std::thread(&OptimizingLatencyFirst::Simulate, &OL3, Setting(16, 500));	
-	
+	auto instance_1 = OptimizingLatencyFirst();
+	std::thread th_1 = std::thread(&OptimizingLatencyFirst::Simulate, &instance_1, Setting(4, 1000));
+	auto instance_2 = OptimizingLatencyFirst();
+	std::thread th_2 = std::thread(&OptimizingLatencyFirst::Simulate, &instance_2, Setting(8, 1000));
+	auto instance_3 = OptimizingLatencyFirst();
+	std::thread th_3 = std::thread(&OptimizingLatencyFirst::Simulate, &instance_3, Setting(12, 1000));
+	auto instance_4 = OptimizingLatencyFirst();
+	std::thread th_4 = std::thread(&OptimizingLatencyFirst::Simulate, &instance_4, Setting(16, 100));
+	th_1.join();
+	th_2.join();
+	th_3.join();
+	th_4.join();
+
 	/*auto OC1 = OptimizingCostByTradingOffLatency();
 	std::thread th_OC1 = std::thread(&OptimizingCostByTradingOffLatency::Simulate, &OC1, Setting(8, 500));
 	auto OC2 = OptimizingCostByTradingOffLatency();
-	std::thread th_OC2 = std::thread(&OptimizingCostByTradingOffLatency::Simulate, &OC2, Setting(12, 500));	
+	std::thread th_OC2 = std::thread(&OptimizingCostByTradingOffLatency::Simulate, &OC2, Setting(12, 500));
 	auto OC3 = OptimizingCostByTradingOffLatency();
-	std::thread th_OC3 = std::thread(&OptimizingCostByTradingOffLatency::Simulate, &OC3, Setting(16, 500));*/
-		
-	th_OL1.join();
-	th_OL2.join();
-	th_OL3.join();
-
-	/*th_OC1.join();
-	th_OC2.join();
-	th_OC3.join();*/
+	std::thread th_OC3 = std::thread(&OptimizingCostByTradingOffLatency::Simulate, &OC3, Setting(16, 500));
+	th_1.join();
+	th_2.join();
+	th_3.join();*/
 
 	return 0;
 }

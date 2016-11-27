@@ -1,6 +1,6 @@
 %%
 ss = get(0, 'ScreenSize');
-set(gcf, 'Position', [ss(1) ss(2) ss(3)/1 ss(4)/3]);
+set(gcf, 'Position', [ss(1) ss(2) ss(3)/1.2 ss(4)/3]);
 pos = 0;
 
 % latency
@@ -25,10 +25,10 @@ bh(4).FaceColor = rgb('SandyBrown');
 bh(5).FaceColor = rgb('MediumPurple');
 
 set(gca, 'XTickLabel', [4 8 12 16]);
-set(gca, 'YLim', [100 240]);
+set(gca, 'YLim', [100 inf*]);
 set(gca, 'fontsize', 10);
 
-lh = legend('SD', 'NA', 'CP', 'CP-L', 'CP-G', 'Orientation', 'vertical', 'Location', 'northwest');
+lh = legend('SD', 'NA', 'CP', 'CP-L', 'CP-G', 'Orientation', 'vertical', 'Location', 'best');
 %set(lh, 'FontSize', 12);
 
 xlabel('Conference size', 'FontSize', 12);
@@ -64,7 +64,7 @@ set(gca, 'XTick', [1 2 3 4]);
 set(gca, 'XTickLabel', [4 8 12 16]);
 set(gca, 'fontsize', 10);
 
-lh = legend('SD', 'NA', 'CP', 'CP-L', 'CP-G', 'Orientation', 'vertical', 'Location', 'northwest');
+lh = legend('SD', 'NA', 'CP', 'CP-L', 'CP-G', 'Orientation', 'vertical', 'Location', 'best');
 %set(lh, 'FontSize', 12);
 
 xlabel('Conference size', 'FontSize', 12);
@@ -96,7 +96,7 @@ set(gca, 'yscale',  'log');
 set(gca, 'XTickLabel', [4 8 12 16]);
 set(gca, 'fontsize', 10);
 
-lh = legend('CP', 'CP-L', 'CP-G', 'Orientation', 'vertical', 'Location', 'northwest');
+lh = legend('CP', 'CP-L', 'CP-G', 'Orientation', 'vertical', 'Location', 'best');
 %set(lh, 'FontSize', 12);
 
 xlabel('Conference size', 'FontSize', 12);
