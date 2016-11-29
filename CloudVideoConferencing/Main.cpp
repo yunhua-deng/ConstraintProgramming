@@ -63,61 +63,31 @@ using namespace CloudVideoConferencingProblem;
 argv[]: array of command-line argument strings (start from 1 because 0 is the function name)*/
 int main(int argc, char *argv[])
 {	
-	/*auto obj = DatasetAnalysis();	
-	obj.Get_DelayToNearestDc_CDF();
-	obj.Get_ShortestPathLength_CDF();*/
-	
-	/*for (const bool region_control : {false, true})
-	{
-		auto instance_1 = OptimizingLatencyFirst();
-		std::thread th_1 = std::thread(&OptimizingLatencyFirst::Simulate, &instance_1, Setting(8, 10000, region_control));
-		auto instance_2 = OptimizingLatencyFirst();
-		std::thread th_2 = std::thread(&OptimizingLatencyFirst::Simulate, &instance_2, Setting(12, 1000, region_control));
-		auto instance_3 = OptimizingLatencyFirst();
-		std::thread th_3 = std::thread(&OptimizingLatencyFirst::Simulate, &instance_3, Setting(16, 100, region_control));
-		auto instance_4 = OptimizingLatencyFirst();
-		std::thread th_4 = std::thread(&OptimizingLatencyFirst::Simulate, &instance_4, Setting(20, 10, region_control));
-		th_1.join();
-		th_2.join();
-		th_3.join();
-		th_4.join();
-	}*/
-
-	/*auto sim = OptimizingLatencyFirst();
-	sim.Simulate(Setting(4, 1000, false));
-	sim.Simulate(Setting(8, 1000, false));
-	sim.Simulate(Setting(12, 100, false));
-	sim.Simulate(Setting(16, 1, false));*/
-
 	vector<Setting> settingList;
-	for (size_t size : { 8, 12, 16, 20 })
+	for (bool control : { false, true })
 	{
-		for (size_t count : { 10000, 1000, 100, 10 })
-		{
-			for (bool control : { false, true })
-			{
-				settingList.push_back(Setting(size, count, control));
-			}
-		}
+		settingList.push_back(Setting(8, 10000, control));
+		settingList.push_back(Setting(12, 1000, control));
+		settingList.push_back(Setting(16, 100, control));
+		settingList.push_back(Setting(20, 10, control));
 	}
-
-	thread t0 = thread(RunSimulation_OptimizingLatencyFirst, settingList.at(0));
-	thread t1 = thread(RunSimulation_OptimizingLatencyFirst, settingList.at(1));
-	thread t2 = thread(RunSimulation_OptimizingLatencyFirst, settingList.at(2));
-	thread t3 = thread(RunSimulation_OptimizingLatencyFirst, settingList.at(3));
-	thread t4 = thread(RunSimulation_OptimizingLatencyFirst, settingList.at(4));
-	thread t5 = thread(RunSimulation_OptimizingLatencyFirst, settingList.at(5));
-	thread t6 = thread(RunSimulation_OptimizingLatencyFirst, settingList.at(6));
-	thread t7 = thread(RunSimulation_OptimizingLatencyFirst, settingList.at(7));
-
-	t0.join();
-	t1.join();
-	t2.join();
-	t3.join();
-	t4.join();
-	t5.join();
-	t6.join();
-	t7.join();
-		
+	
+	auto th_0 = thread(RunSimulation_OptimizingLatencyFirst, settingList.at(0));
+	auto th_1 = thread(RunSimulation_OptimizingLatencyFirst, settingList.at(1));
+	auto th_2 = thread(RunSimulation_OptimizingLatencyFirst, settingList.at(2));
+	auto th_3 = thread(RunSimulation_OptimizingLatencyFirst, settingList.at(3));
+	auto th_4 = thread(RunSimulation_OptimizingLatencyFirst, settingList.at(4));
+	auto th_5 = thread(RunSimulation_OptimizingLatencyFirst, settingList.at(5));
+	auto th_6 = thread(RunSimulation_OptimizingLatencyFirst, settingList.at(6));
+	auto th_7 = thread(RunSimulation_OptimizingLatencyFirst, settingList.at(7));
+	th_0.join();
+	th_1.join();
+	th_2.join();
+	th_3.join();
+	th_4.join();
+	th_5.join();
+	th_6.join();
+	th_7.join();
+			
 	return 0;
 }
