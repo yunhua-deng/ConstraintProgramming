@@ -64,11 +64,13 @@ namespace CloudVideoConferencingProblem
 	{		
 		size_t session_size;
 		size_t session_count;
+		bool region_control;
 
-		Setting(const size_t given_session_size, const size_t given_session_count)
+		Setting(const size_t given_session_size, const size_t given_session_count, const bool given_region_control)
 		{
 			session_size = given_session_size;
 			session_count = given_session_count;
+			region_control = given_region_control;
 		}
 
 		Setting() {}
@@ -77,8 +79,9 @@ namespace CloudVideoConferencingProblem
 	struct Global
 	{
 		string data_directory = ".\\Data\\";
-		string output_directory = data_directory + "Output\\";		
+		string output_directory = data_directory + "Output\\";	
 
+		double dc_to_dc_latency_discount = 0;
 		vector<vector<double>> client_to_dc_delay_table;
 		vector<vector<double>> dc_to_dc_delay_table;
 		vector<string> client_name_list;
@@ -160,8 +163,9 @@ namespace CloudVideoConferencingProblem
 				
 		Solution GetSolutionInfoAfterAssignment(const vector<Client> &, const vector<ID> &);
 
-		vector<ID> GenerateOneSession(const size_t);
-		vector<ID> GenerateOneSessionWithTwoRegion(const size_t);
+		vector<ID> GenerateOneRandomSessionNoRegionControl(const size_t);
+		vector<ID> GenerateOneRandomSessionWithRegionControl(const size_t);
+		vector<ID> GenerateOneRandomSessionWithRegionControlTwoRegion(const size_t);
 		vector<vector<Client>> GenerateRandomSessions(const Setting &);
 
 		/*CP stuff*/		
@@ -213,4 +217,6 @@ namespace CloudVideoConferencingProblem
 	private:
 		Solution CP(vector<Client>, const Constraint & input_extraConstraintSet = Constraint(0, 0));
 	};
+
+	void RunSimulation_OptimizingLatencyFirst(const Setting &);
 }

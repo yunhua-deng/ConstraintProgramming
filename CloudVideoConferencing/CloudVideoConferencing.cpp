@@ -83,8 +83,8 @@ namespace CloudVideoConferencingProblem
 			global.dc_name_list.push_back(row.at(0));
 			vector<double> dc_to_dc_delay_table_row;
 			for (auto col = 1; col < row.size(); col++)
-			{
-				dc_to_dc_delay_table_row.push_back(stod(row.at(col)) / 2); // one-way delay = rtt / 2
+			{				
+				dc_to_dc_delay_table_row.push_back((1 - global.dc_to_dc_latency_discount) * stod(row.at(col)) / 2); // one-way delay = rtt / 2, and considering discount
 			}
 			global.dc_to_dc_delay_table.push_back(dc_to_dc_delay_table_row);
 		}
@@ -109,6 +109,7 @@ namespace CloudVideoConferencingProblem
 			d.provider = d.name.substr(0, d.name.find_first_of("-")); // e.g. "ec2"
 			d.server_rental_price = global.dc_server_rental_price_list.at(i);
 			d.external_bandwidth_price = global.dc_external_bandwidth_price_list.at(i);
+			d.internal_bandwidth_price = global.dc_internal_bandwidth_price_list.at(i);
 			d.internal_bandwidth_price = global.dc_internal_bandwidth_price_list.at(i);
 
 			global.datacenter[d.id] = d;
@@ -136,13 +137,12 @@ namespace CloudVideoConferencingProblem
 			/*record this client*/
 			global.client[c.id] = c;
 
-			/*cluster this client subject to the clustering criterion to avoid including some isolated remote clients into any session
-			(i.e., distance to its nearest_dc must be < 50, because over 90% clients are within 50ms to their nearest datacenters)*/
-			if (global.client_to_dc_delay_table.at(c.id).at(c.nearest_dc) <= 50)
+			/* exclude some very remote clients (with delay > 50ms to any dc) when clustering clients */
+			if (global.client_to_dc_delay_table.at(c.id).at(c.nearest_dc) <= 50)			
 			{
 				global.client_cluster[c.region].push_back(c.id);
 			}
-		}		
+		}
 
 		/*generate all non-empty dc combinations (i.e., the collection of subsets of the full dc set)*/
 		vector<bool> x;
@@ -406,16 +406,29 @@ namespace CloudVideoConferencingProblem
 		return result;
 	}
 
-	/*ensure the generated session contains clients from all regions*/
-	vector<ID> SimulationBase::GenerateOneSession(const size_t session_size)
+	/* to generate a session in a purely random manner */
+	vector<ID> SimulationBase::GenerateOneRandomSessionNoRegionControl(const size_t session_size)
 	{
-		/*shuffle for creating randomness of each session*/
-		for (auto& cluster : global.client_cluster)
+		vector<ID> one_session;
+		set<size_t> random_indexes = GenerateRandomIndexes(0, global.client_id_list.size() - 1, session_size);
+		for (auto it : random_indexes) { one_session.push_back(global.client_id_list.at(it)); }
+
+		/*sort the client id's in ascending order*/
+		std::sort(one_session.begin(), one_session.end());
+
+		return one_session;
+	}
+
+	/*to generate a session that contains clients from all regions*/
+	vector<ID> SimulationBase::GenerateOneRandomSessionWithRegionControl(const size_t session_size)
+	{
+		/*shuffle each cluster of clients to introduce randomness*/
+		for (auto & cluster : global.client_cluster)
 		{
 			random_shuffle(cluster.second.begin(), cluster.second.end());
 		}
 
-		/*making one random session with the number of clients from each cluster being as close as possible*/
+		/*making one random session with the number of clients from each cluster being as equal as possible*/
 		vector<ID> one_session;
 		size_t remaining = session_size;
 		size_t next_pos = 0;
@@ -447,10 +460,10 @@ namespace CloudVideoConferencingProblem
 		return one_session;
 	}
 
-	/*to generate session that contains clients from two regions*/
-	vector<ID> SimulationBase::GenerateOneSessionWithTwoRegion(const size_t session_size)
+	/*to generate a session that contains clients from two regions*/
+	vector<ID> SimulationBase::GenerateOneRandomSessionWithRegionControlTwoRegion(const size_t session_size)
 	{
-		/*shuffle for creating randomness of each session*/
+		/*shuffle each cluster of clients to introduce randomness*/
 		vector<string> cluster_names;
 		for (auto& cluster : global.client_cluster)
 		{
@@ -512,12 +525,23 @@ namespace CloudVideoConferencingProblem
 		srand(997);
 		for (size_t i = 0; i < sim_setting.session_count; i++)
 		{
-			auto one_session = GenerateOneSession(sim_setting.session_size);
+			vector<ID> one_session;
+			if (sim_setting.region_control) one_session = GenerateOneRandomSessionWithRegionControl(sim_setting.session_size);
+			else one_session = GenerateOneRandomSessionNoRegionControl(sim_setting.session_size);
+			
 			vector<Client> session_clients;
 			for (auto & i : one_session)
 			{
 				session_clients.push_back(global.client.at(i));
-			}			
+			}
+			
+			if (session_clients.empty()) 
+			{
+				cout << "an unhandled exception occurs in GenerateRandomSessions()\n";
+				cin.get();
+				return vector<vector<Client>>();
+			}
+			
 			random_sessions.push_back(session_clients);
 		}		
 		return random_sessions;
@@ -915,7 +939,7 @@ namespace CloudVideoConferencingProblem
 
 	/*use first_solution_only to control whether it will terminate after finding the first solution*/
 	void SimulationBase::AssignClient(const vector<Client> & session_clients, const size_t k, vector<ID> & session_assignment, const bool first_solution_only)
-	{
+	{		
 		/*go through every value (i.e., dc) in this variable's (i.e., client's) domain (i.e., the set of assignment options)*/
 		for (auto dc : session_clients.at(k).dc_domain)
 		{
@@ -961,11 +985,11 @@ namespace CloudVideoConferencingProblem
 		/*create folder and files for output*/
 		auto this_output_directory = global.output_directory + local_output_directory;
 		_mkdir(this_output_directory.c_str());		
-		ofstream computational_time_file(this_output_directory + "sessionSize[" + std::to_string(sim_setting.session_size) + "]_" + "computationalTime.csv");
-		ofstream latency_measure_file(this_output_directory + "sessionSize[" + std::to_string(sim_setting.session_size) + "]_" + "latencyMeasure.csv");
-		ofstream cost_measure_file(this_output_directory + "sessionSize[" + std::to_string(sim_setting.session_size) + "]_" + "costMeasure.csv");
-		ofstream solution_cardinality_file(this_output_directory + "sessionSize[" + std::to_string(sim_setting.session_size) + "]_" + "solutionCardinality.csv");
-		ofstream solution_cardinality_CDF_file(this_output_directory + "sessionSize[" + std::to_string(sim_setting.session_size) + "]_" + "solutionCardinality_CDF.csv");
+		ofstream computational_time_file(this_output_directory + std::to_string(sim_setting.session_size) + "_" + "computationalTime.csv");
+		ofstream latency_measure_file(this_output_directory + std::to_string(sim_setting.session_size) + "_" + "latencyMeasure.csv");
+		ofstream cost_measure_file(this_output_directory + std::to_string(sim_setting.session_size) + "_" + "costMeasure.csv");
+		ofstream solution_cardinality_file(this_output_directory + std::to_string(sim_setting.session_size) + "_" + "solutionCardinality.csv");
+		ofstream solution_cardinality_CDF_file(this_output_directory + std::to_string(sim_setting.session_size) + "_" + "solutionCardinality_CDF.csv");
 
 		/*generate random_sessions*/
 		auto random_sessions = GenerateRandomSessions(sim_setting);
@@ -1046,7 +1070,7 @@ namespace CloudVideoConferencingProblem
 		if (!isInitialized) { Initialize(); }
 		
 		/*generate random_sessions*/
-		auto random_sessions = GenerateRandomSessions(sim_setting);		
+		auto random_sessions = GenerateRandomSessions(sim_setting);	
 
 		/*stuff to store results*/
 		vector<string> algList = { "SD", "NA", "CP", "CP-L", "CP-G" };
@@ -1091,7 +1115,7 @@ namespace CloudVideoConferencingProblem
 		for (auto session_clients : random_sessions) // CP-L
 		{
 			auto timePoint = clock();
-			auto solution = CP(session_clients, Constraint(5, 0));
+			auto solution = CP(session_clients, Constraint(4, 0));
 			time_CP_L.push_back(difftime(clock(), timePoint));
 			
 			string algName = "CP-L";
@@ -1105,7 +1129,7 @@ namespace CloudVideoConferencingProblem
 		for (auto session_clients : random_sessions) // CP-G
 		{
 			auto timePoint = clock();
-			auto solution = CP(session_clients, Constraint(0, 5));
+			auto solution = CP(session_clients, Constraint(0, 4));
 			time_CP_G.push_back(difftime(clock(), timePoint));
 			
 			string algName = "CP-G";
@@ -1117,12 +1141,14 @@ namespace CloudVideoConferencingProblem
 				
 		/*create folder and files and write data*/
 		auto this_output_directory = global.output_directory + local_output_directory;
+		_mkdir(this_output_directory.c_str()); //_mkdir() cannot work if the parent directory does not exist (therefore, need to create one one-level directory at a time)
+		this_output_directory += (sim_setting.region_control ? ("RegionControl=ON\\") : ("RegionControl=OFF\\"));
 		_mkdir(this_output_directory.c_str());
-		ofstream time_file(this_output_directory + "sessionSize[" + std::to_string(sim_setting.session_size) + "]_" + "time.csv");
-		ofstream latency_file(this_output_directory + "sessionSize[" + std::to_string(sim_setting.session_size) + "]_" + "latency.csv");
-		ofstream cost_file(this_output_directory + "sessionSize[" + std::to_string(sim_setting.session_size) + "]_" + "cost.csv");		
-		ofstream cardinality_CDF_file(this_output_directory + "sessionSize[" + std::to_string(sim_setting.session_size) + "]_" + "cardinality_CDF.csv");
-		ofstream ranking_CDF_file(this_output_directory + "sessionSize[" + std::to_string(sim_setting.session_size) + "]_" + "ranking_CDF.csv");
+		ofstream time_file(this_output_directory + std::to_string(sim_setting.session_size) + "_" + "time.csv");
+		ofstream latency_file(this_output_directory + std::to_string(sim_setting.session_size) + "_" + "latency.csv");
+		ofstream cost_file(this_output_directory + std::to_string(sim_setting.session_size) + "_" + "cost.csv");		
+		ofstream cardinality_CDF_file(this_output_directory + std::to_string(sim_setting.session_size) + "_" + "cardinality_CDF.csv");
+		ofstream ranking_CDF_file(this_output_directory + std::to_string(sim_setting.session_size) + "_" + "ranking_CDF.csv");
 
 		time_file << GetMaxValue(time_CP) << "," << GetMaxValue(time_CP_L) << "," << GetMaxValue(time_CP_G);
 		
@@ -1194,5 +1220,11 @@ namespace CloudVideoConferencingProblem
 			else path_length_constraint++; /* loosen the constraint and continue to loop */
 		}
 		return GetSolutionInfoAfterAssignment(session_clients, optimal_assignment);
+	}	
+
+	void RunSimulation_OptimizingLatencyFirst(const Setting & sim_setting)
+	{
+		auto sim = OptimizingLatencyFirst();
+		sim.Simulate(sim_setting);
 	}
 }

@@ -8,16 +8,8 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
-#include <iomanip>
 #include <algorithm>
-#include <cstdlib>
-#include <cmath>
-#include <ctime>
-#include <functional>
-#include <exception>
-#include <utility>
 #include <thread>
-#include <chrono>
 #include <direct.h>
 
 using namespace std;
@@ -32,3 +24,4 @@ double GetRatioOfGreaterThan(const vector<double>&, const double);
 void GenerateAllSubsets(const vector<size_t>&, vector<bool>&, size_t, vector<vector<size_t>>&);
 bool SubsetComparatorBySize(const vector<size_t>&, const vector<size_t>&);
 vector<vector<string>> ReadDelimitedTextFileIntoVector(const string, const char, const bool);
+set<size_t> GenerateRandomIndexes(const size_t, const size_t, const size_t);

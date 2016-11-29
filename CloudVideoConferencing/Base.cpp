@@ -39,6 +39,24 @@ vector<vector<string>> ReadDelimitedTextFileIntoVector(const string input_file_n
 	return strings_read;
 }
 
+set<size_t> GenerateRandomIndexes(const size_t min, const size_t max, const size_t size)
+{
+	if (min >= max)
+	{
+		cout << "an unhandled exception occurs in GenerateRandomSetOfNumbers()\n";
+		cin.get();
+		return set<size_t>();
+	}
+
+	set<size_t> result;
+	while (result.size() < size)
+	{
+		result.insert(min + rand() % (max - min + 1));
+	}
+	
+	return result;
+}
+
 double GetSumValue(const vector<double> &v)
 {
 	if (v.empty()) return 0;

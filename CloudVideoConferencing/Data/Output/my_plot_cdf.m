@@ -30,11 +30,11 @@ pdf -transparent
 ss = get(0, 'ScreenSize');
 set(gcf, 'Position', [ss(1) ss(2) ss(3) ss(4)/3]);
 pos = 0;
-for size = [4 8 12 16]
+for size = [8 12 16 20]
     pos = pos + 1;
     subplot(1, 4, pos);
     
-    data = dlmread(sprintf('sessionSize[%d]_cardinality_CDF.csv', size));
+    data = dlmread(sprintf('%d_cardinality_CDF.csv', size));
     
     p_h = cdfplot(data(1, :));    
     set(p_h, 'LineStyle', '-', 'LineWidth', 2, 'Color', 'm');
@@ -69,11 +69,11 @@ export_fig CDF_Cardinality.pdf -transparent
 ss = get(0, 'ScreenSize');
 set(gcf, 'Position', [ss(1) ss(2) ss(3) ss(4)/3]);
 pos = 0;
-for size = [4 8 12 16]
+for size = [8 12 16 20]
     pos = pos + 1;
     subplot(1, 4, pos);    
     
-    data = dlmread(sprintf('sessionSize[%d]_ranking_CDF.csv', size));
+    data = dlmread(sprintf('%d_ranking_CDF.csv', size));
     
      p_h = cdfplot(data(1, :));    
     set(p_h, 'LineStyle', '-', 'LineWidth', 2, 'Color', 'm');
