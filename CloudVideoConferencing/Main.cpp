@@ -57,37 +57,73 @@
 //	random_shuffle(l.begin(), l.end());
 //}
 
+/*multi-threading*/
+//int main(int argc, char *argv[])
+//{
+//	const size_t nloop = 11;
+//
+//	// Serial version
+//	{
+//		// Pre loop
+//		std::cout << "serial:" << std::endl;
+//		// loop over all items
+//		for (int i = 0; i<nloop; i++)
+//		{
+//			// inner loop
+//			{
+//				const int j = i*i;
+//				std::cout << j << std::endl;
+//			}
+//		}
+//		// Post loop
+//		std::cout << std::endl;
+//	}
+//
+//	// Parallel version
+//	// number of threads
+//	const size_t nthreads = std::thread::hardware_concurrency();
+//	{
+//		// Pre loop
+//		std::cout << "parallel (" << nthreads << " threads):" << std::endl;
+//		std::vector<std::thread> threads(nthreads);
+//		std::mutex critical;
+//		for (int t = 0; t<nthreads; t++)
+//		{
+//			threads[t] = std::thread(std::bind(
+//				[&](const int bi, const int ei, const int t)
+//			{
+//				// loop over all items
+//				for (int i = bi; i<ei; i++)
+//				{
+//					// inner loop
+//					{
+//						const int j = i*i;
+//						// (optional) make output critical
+//						std::lock_guard<std::mutex> lock(critical);
+//						std::cout << j << std::endl;
+//					}
+//				}
+//			}, t*nloop / nthreads, (t + 1) == nthreads ? nloop : (t + 1)*nloop / nthreads, t));
+//		}
+//		std::for_each(threads.begin(), threads.end(), [](std::thread& x) {x.join(); });
+//		// Post loop
+//		std::cout << std::endl;
+//	}
+//}
+
 using namespace CloudVideoConferencingProblem;
 
 /*argc: number of strings in array argv (at least 1);
 argv[]: array of command-line argument strings (start from 1 because 0 is the function name)*/
 int main(int argc, char *argv[])
 {	
-	vector<Setting> settingList;
-	for (bool control : { false, true })
+	vector<thread> workers;
+	for (size_t session_size = 4; session_size <= 16; session_size += 2)
 	{
-		settingList.push_back(Setting(8, 10000, control));
-		settingList.push_back(Setting(12, 1000, control));
-		settingList.push_back(Setting(16, 100, control));
-		settingList.push_back(Setting(20, 10, control));
+		workers.push_back(thread(RunSimulation_OptimizingLatencyFirst, Setting(session_size, 300, false)));
+		workers.push_back(thread(RunSimulation_OptimizingLatencyFirst, Setting(session_size, 300, true)));
 	}
-	
-	auto th_0 = thread(RunSimulation_OptimizingLatencyFirst, settingList.at(0));
-	auto th_1 = thread(RunSimulation_OptimizingLatencyFirst, settingList.at(1));
-	auto th_2 = thread(RunSimulation_OptimizingLatencyFirst, settingList.at(2));
-	auto th_3 = thread(RunSimulation_OptimizingLatencyFirst, settingList.at(3));
-	auto th_4 = thread(RunSimulation_OptimizingLatencyFirst, settingList.at(4));
-	auto th_5 = thread(RunSimulation_OptimizingLatencyFirst, settingList.at(5));
-	auto th_6 = thread(RunSimulation_OptimizingLatencyFirst, settingList.at(6));
-	auto th_7 = thread(RunSimulation_OptimizingLatencyFirst, settingList.at(7));
-	th_0.join();
-	th_1.join();
-	th_2.join();
-	th_3.join();
-	th_4.join();
-	th_5.join();
-	th_6.join();
-	th_7.join();
-			
+	std::for_each(workers.begin(), workers.end(), [](thread &t) { t.join(); });
+
 	return 0;
 }

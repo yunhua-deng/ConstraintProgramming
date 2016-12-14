@@ -26,6 +26,7 @@ namespace CloudVideoConferencingProblem
 	bool operator<(const Path&, const Path&);
 	bool operator==(const Path&, const Path&);
 	void PrintOutPath(const Path&);
+	Path GetInversePath(const Path&);
 
 	struct Client
 	{
@@ -38,12 +39,10 @@ namespace CloudVideoConferencingProblem
 		string region;
 		string subregion;
 		
-		list<ID> dc_domain; // i.e., the list of assignment options, using list (rather than vector) for deletion of elements
-		ID cheapest_dc;		
-
-		//map<ID, vector<Path>> path_to_client; // memory-intensive (not applicable to large input size)
-		//map<ID, Path> shortest_path_to_client;
+		list<ID> dc_domain; // i.e., the list of assignment options, using list (rather than vector) to support efficient removal of elements
+		ID cheapest_dc;
 	};
+
 	bool operator==(const Client&, const Client&);
 	bool operator!=(const Client&, const Client&);
 	bool operator<(const Client&, const Client&);
@@ -95,44 +94,51 @@ namespace CloudVideoConferencingProblem
 		map<ID, Datacenter> datacenter;
 		vector<vector<ID>> all_dc_subsets;
 		map<ID, Client> client;
-		map<string, vector<ID>> client_cluster;		
+		map<string, vector<ID>> client_cluster;
 	};
 
 	struct Solution
 	{		
-		double latency;
-		double cost;
-		int cardinality;
+		Path longest_path;
+		double latency; // the bound of the interaction latency of between any client pair
+		double cost; // the total traffic cost
+		int cardinality; // the number of selected datacenters
 		vector<int> assignedDc_ranking;
 	};
 
 	struct Result
 	{
+		map<string, vector<double>> time_total_result;
+		map<string, vector<double>> time_proportion_result; // the proportion of time spent on optimizing the latency
 		map<string, vector<double>> latency_result;
 		map<string, vector<double>> cost_result;
 		map<string, vector<int>> cardinality_result;
 		map<string, vector<int>> assignedDc_ranking_result;
+		map<string, map<pair<string, string>, int>> farthestClientPair_dist_result;
 
 		Result(const vector<string> algName_list)
 		{
 			for (string algName : algName_list)
 			{
-				latency_result.insert(std::pair<string, vector<double>>(algName, vector<double>()));
-				cost_result.insert(std::pair<string, vector<double>>(algName, vector<double>()));
-				cardinality_result.insert(std::pair<string, vector<int>>(algName, vector<int>()));
-				assignedDc_ranking_result.insert(std::pair<string, vector<int>>(algName, vector<int>()));
+				time_total_result.insert({ algName, vector<double>() });
+				time_proportion_result.insert({ algName, vector<double>() });
+				latency_result.insert({ algName, vector<double>() });
+				cost_result.insert({ algName, vector<double>() });
+				cardinality_result.insert({ algName, vector<int>() });
+				assignedDc_ranking_result.insert({ algName, vector<int>() });
+				farthestClientPair_dist_result.insert({ algName, map<pair<string, string>, int>() });
 			}
 		}
 	};
 
 	struct Constraint
 	{	
-		size_t client_domain_constraint; // if top_k is 0, then all dc's are put into each client's domain, otherwise, only consider top_k dc's (k-nearest dc's)
+		size_t datacenter_proximity_constraint; // if top_k is 0, then all dc's are put into each client's domain, otherwise, only consider top_k dc's (k-nearest dc's)
 		size_t solution_cardinality_constraint; // i.e., the allowed maximum number of datacenters appearing in the solution (if it is 0, this constraint is ignored)
 
-		Constraint(const size_t client_domain_constraint_in, const size_t solution_cardinality_constraint_in)
+		Constraint(const size_t datacenter_proximity_constraint_in, const size_t solution_cardinality_constraint_in)
 		{
-			client_domain_constraint = client_domain_constraint_in;
+			datacenter_proximity_constraint = datacenter_proximity_constraint_in;
 			solution_cardinality_constraint = solution_cardinality_constraint_in;
 		}
 
@@ -147,21 +153,18 @@ namespace CloudVideoConferencingProblem
 		Global global;
 
 		void RankDatacenters4Client(Client&, const vector<ID>&);
-		int GetAssignedDcRanking(const Client&, const ID);
-				
-		//void FindShortestPaths(vector<Client>&, const vector<ID>&); /*only applicable to small client_list input*/
-		//void FindAllPaths(vector<Client>&, const vector<ID>&); /*only applicable to small client_list input*/
+		int GetAssignedDcRanking(const Client&, const ID);		
 						
 		double GetPathLength(const Path&);
-		double GetShortestPathLengthOfClientPair(const Client &, const Client &, const vector<ID> &);
+		Path GetShortestPathOfClientPair(const Client &, const Client &, const vector<ID> &);				
 
-		double GetSessionLatencyLowerBound(const vector<Client> &);
+		double GetSessionLatencyLowerBound(const vector<Client> &);		
 		double GetSessionCostLowerBound(const vector<Client> &);
 
-		double GetSessionLatencyAfterAssignment(const vector<Client> &, const vector<ID> &);		
-		double GetSessionCostAfterAssignment(const vector<Client> &, const vector<ID> &);		
+		Path GetSessionLongestPathAfterAssignment(const vector<Client> &, const vector<ID> &);				
+		double GetSessionCostAfterAssignment(const vector<Client> &, const vector<ID> &);
 				
-		Solution GetSolutionInfoAfterAssignment(const vector<Client> &, const vector<ID> &);
+		Solution GetSessionSolutionInfoAfterAssignment(const vector<Client> &, const vector<ID> &);
 
 		vector<ID> GenerateOneRandomSessionNoRegionControl(const size_t);
 		vector<ID> GenerateOneRandomSessionWithRegionControl(const size_t);
@@ -182,11 +185,10 @@ namespace CloudVideoConferencingProblem
 		Constraint extraConstraintSet;
 		size_t num_discovered_solutions = 0; // always remember to reset it to 0
 		double optimal_cost;
-		vector<ID> optimal_assignment;		
-
-		/*baseline methods*/
-		Solution NearestAssignment(vector<Client>);
-		Solution SingleDatacenter(vector<Client>);
+		vector<ID> optimal_assignment;
+		clock_t starting_time;
+		double time_latency_stage = 0;
+		double time_cost_stage = 0;
 	};
 
 	class DatasetAnalysis : public SimulationBase

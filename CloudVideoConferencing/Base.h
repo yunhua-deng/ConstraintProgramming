@@ -10,6 +10,7 @@
 #include <sstream>
 #include <algorithm>
 #include <thread>
+#include <mutex>
 #include <direct.h>
 
 using namespace std;
@@ -25,3 +26,4 @@ void GenerateAllSubsets(const vector<size_t>&, vector<bool>&, size_t, vector<vec
 bool SubsetComparatorBySize(const vector<size_t>&, const vector<size_t>&);
 vector<vector<string>> ReadDelimitedTextFileIntoVector(const string, const char, const bool);
 set<size_t> GenerateRandomIndexes(const size_t, const size_t, const size_t);
+void DumpLabeledMatrixToDisk(const map<pair<string, string>, int> &, const vector<string> &, const string &);

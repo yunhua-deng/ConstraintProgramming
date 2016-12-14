@@ -155,3 +155,24 @@ bool SubsetComparatorBySize(const vector<size_t>& x, const vector<size_t>& y)
 {
 	return (x.size() < y.size());
 }
+
+/*label_list must be sorted*/
+void DumpLabeledMatrixToDisk(const map<pair<string, string>, int> & matrix, const vector<string> & label_list, const string & file_name)
+{	
+	string buffer = "";
+	for (const auto & it : label_list) // first row (header)
+	{ 
+		buffer += "," + it; 
+	}	
+	for (const auto & i : label_list)
+	{
+		buffer += "\n" + i;
+		for (const auto & j : label_list)
+		{
+			buffer += "," + std::to_string(matrix.at({ i, j }));
+		}
+	}
+	ofstream out_file(file_name);
+	out_file << buffer;	
+	out_file.close();
+}
