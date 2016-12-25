@@ -5,6 +5,37 @@
 namespace CloudVideoConferencingProblem
 {
 	using ID = size_t;
+	
+	struct Client
+	{
+		ID id;
+		string name;
+		double outgoing_data_amount = 0;
+		double incoming_data_amount = 0;
+		ID nearest_dc;
+		vector<ID> ranked_dc_list;
+		string region;
+		string subregion;
+		ID cheapest_dc;
+
+		list<ID> dc_domain; // the list of possible assignments, using list (rather than vector) to support efficient removal of elements
+	};
+
+	bool operator==(const Client& c_x, const Client& c_y);
+	bool operator!=(const Client& c_x, const Client& c_y);
+	bool operator<(const Client& c_x, const Client& c_y);
+	bool ClientComparator_ByDomainSize(const Client& c_x, const Client& c_y);
+
+	struct Datacenter
+	{
+		ID id;
+		string name;
+		string provider;
+		double server_rental_price;
+		double external_bandwidth_price;
+		double internal_bandwidth_price;
+	};
+	bool DatacenterComparator_ByExternalBandwidthPrice(const Datacenter& d_x, const Datacenter& d_y);
 
 	struct Path
 	{
@@ -23,41 +54,10 @@ namespace CloudVideoConferencingProblem
 
 		Path() {}
 	};
-	bool operator<(const Path&, const Path&);
-	bool operator==(const Path&, const Path&);
-	void PrintOutPath(const Path&);
-	Path GetInversePath(const Path&);
-
-	struct Client
-	{
-		ID id;
-		string name;
-		double outgoing_data_amount = 0;
-		double incoming_data_amount = 0;
-		ID nearest_dc;
-		vector<ID> ranked_dc_list;
-		string region;
-		string subregion;
-		
-		list<ID> dc_domain; // i.e., the list of assignment options, using list (rather than vector) to support efficient removal of elements
-		ID cheapest_dc;
-	};
-
-	bool operator==(const Client&, const Client&);
-	bool operator!=(const Client&, const Client&);
-	bool operator<(const Client&, const Client&);
-	bool ClientComparator_ByDomainSize(const Client&, const Client&);
-
-	struct Datacenter
-	{
-		ID id;
-		string name;
-		string provider;
-		double server_rental_price;
-		double external_bandwidth_price;
-		double internal_bandwidth_price;
-	};
-	bool DatacenterComparator_ByExternalBandwidthPrice(const Datacenter&, const Datacenter&);
+	bool operator<(const Path& p_x, const Path& p_y);
+	bool operator==(const Path& p_x, const Path& p_y);
+	void PrintOutPath(const Path& p);
+	Path GetInversePath(const Path & p);
 
 	struct Setting
 	{		
@@ -132,14 +132,14 @@ namespace CloudVideoConferencingProblem
 	};
 
 	struct Constraint
-	{	
-		size_t datacenter_proximity_constraint; // if top_k is 0, then all dc's are put into each client's domain, otherwise, only consider top_k dc's (k-nearest dc's)
-		size_t solution_cardinality_constraint; // i.e., the allowed maximum number of datacenters appearing in the solution (if it is 0, this constraint is ignored)
+	{			
+		size_t proximity_constraint; // if top_k is 0, then all dc's are put into each client's domain, otherwise, only consider top_k dc's (k-nearest dc's)
+		size_t cardinality_constraint; // i.e., the allowed maximum number of datacenters appearing in the solution (if it is 0, this constraint is ignored)
 
-		Constraint(const size_t datacenter_proximity_constraint_in, const size_t solution_cardinality_constraint_in)
+		Constraint(const size_t proximity_constraint_in, const size_t cardinality_constraint_in)
 		{
-			datacenter_proximity_constraint = datacenter_proximity_constraint_in;
-			solution_cardinality_constraint = solution_cardinality_constraint_in;
+			proximity_constraint = proximity_constraint_in;
+			cardinality_constraint = cardinality_constraint_in;
 		}
 
 		Constraint() {}
@@ -172,17 +172,25 @@ namespace CloudVideoConferencingProblem
 		vector<vector<Client>> GenerateRandomSessions(const Setting &);
 
 		/*CP stuff*/		
-		bool EnforceNodeConsistency(vector<Client> &);
-		bool EnforceArcConsistency(vector<Client> &);
+		bool EnforceNodeConsistency(vector<Client> &);		
+		bool EnforceArcConsistency(vector<Client> &, const size_t k = 0);
 		bool ArcReduce(Client &, const Client &);
-		bool EnforceLocalConsistency(vector<Client> &);	
-		void AssignClient(const vector<Client> &, const size_t, vector<ID> &, const bool first_solution_only);
+		bool EnforceLocalConsistency(vector<Client> &);	// including node (unary) and arc (binary)
 		void InitializeDomains4Clients(vector<Client> &);
-		void FindCheapestDcInDomain4Clients(vector<Client> &);
-		bool IsValidPartialSolution(const vector<Client> &, const size_t, const vector<ID> &, const ID);
-		bool IsWorthExtension(const vector<Client> &, const size_t, const vector<ID> &, const ID, const double);				
-		double path_length_constraint; // i.e., the allowed maximum one-way latency between any client pair
-		Constraint extraConstraintSet;
+		void FindCheapestDcInDomain4Clients(vector<Client> &);		
+		void AssignClient(const vector<Client> &, const size_t, vector<ID> &, const bool first_solution_only);
+		void AssignClient_FC(vector<Client> &, const size_t, vector<ID> &);
+		void AssignClient_LA(vector<Client> &, const size_t, vector<ID> &);
+		bool BackwardChecking(const vector<Client> &, const size_t, const vector<ID> &);
+		bool ForwardChecking(vector<Client> &, const size_t, const vector<ID> &);
+		bool LookAhead(vector<Client> &, const size_t, const vector<ID> &);
+		
+		/*branch and bound*/
+		bool ViolateCardinalityConstraint(const size_t k, const vector<ID>&);
+		bool CannotImproveCost(const vector<Client> &, const size_t, const vector<ID> &);
+
+		double end_to_end_delay_constraint; // i.e., the allowed maximum one-way latency between any client pair
+		Constraint additional_contraints;
 		size_t num_discovered_solutions = 0; // always remember to reset it to 0
 		double optimal_cost;
 		vector<ID> optimal_assignment;
@@ -217,7 +225,7 @@ namespace CloudVideoConferencingProblem
 		string local_output_directory = "OptimizingLatencyFirst\\";
 
 	private:
-		Solution CP(vector<Client>, const Constraint & input_extraConstraintSet = Constraint(0, 0));
+		Solution CP(vector<Client>, const Constraint & input_additional_contraints = Constraint(0, 0));
 	};
 
 	void RunSimulation_OptimizingLatencyFirst(const Setting &);

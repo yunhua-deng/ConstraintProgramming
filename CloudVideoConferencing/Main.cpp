@@ -117,13 +117,15 @@ using namespace CloudVideoConferencingProblem;
 argv[]: array of command-line argument strings (start from 1 because 0 is the function name)*/
 int main(int argc, char *argv[])
 {	
-	vector<thread> workers;
-	for (size_t session_size = 4; session_size <= 16; session_size += 2)
+	/*vector<thread> workers;
+	for (size_t session_size = 4; session_size <= 10; session_size += 2)
 	{
 		workers.push_back(thread(RunSimulation_OptimizingLatencyFirst, Setting(session_size, 300, false)));
 		workers.push_back(thread(RunSimulation_OptimizingLatencyFirst, Setting(session_size, 300, true)));
 	}
-	std::for_each(workers.begin(), workers.end(), [](thread &t) { t.join(); });
+	std::for_each(workers.begin(), workers.end(), [](thread &t) { t.join(); });*/
+
+	RunSimulation_OptimizingLatencyFirst(Setting(8, 10, false));
 
 	return 0;
 }

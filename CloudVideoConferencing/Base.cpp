@@ -39,6 +39,7 @@ vector<vector<string>> ReadDelimitedTextFileIntoVector(const string input_file_n
 	return strings_read;
 }
 
+/*return a set of unique random indexes*/
 set<size_t> GenerateRandomIndexes(const size_t min, const size_t max, const size_t size)
 {
 	if (min >= max)

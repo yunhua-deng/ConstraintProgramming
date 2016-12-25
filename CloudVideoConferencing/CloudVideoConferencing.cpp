@@ -2,6 +2,13 @@
 
 namespace CloudVideoConferencingProblem
 {
+	bool operator==(const Client& c_x, const Client& c_y) { return (c_x.id == c_y.id); }
+	bool operator!=(const Client& c_x, const Client& c_y) { return (c_x.id != c_y.id); }
+	bool operator<(const Client& c_x, const Client& c_y) { return (c_x.id < c_y.id); }
+	bool ClientComparator_ByDomainSize(const Client& c_x, const Client& c_y) { return (c_x.dc_domain.size() < c_y.dc_domain.size()); }
+
+	bool DatacenterComparator_ByExternalBandwidthPrice(const Datacenter& d_x, const Datacenter& d_y) { return (d_x.external_bandwidth_price < d_y.external_bandwidth_price); }
+
 	bool operator<(const Path& p_x, const Path& p_y)
 	{
 		if (p_x.sender < p_y.sender) return true;
@@ -18,49 +25,18 @@ namespace CloudVideoConferencingProblem
 		}
 		else return false;
 	};
-
 	bool operator==(const Path& p_x, const Path& p_y)
 	{
-		return (p_x.sender == p_y.sender
-			&& p_x.dc_sender == p_y.dc_sender
-			&& p_x.dc_receiver == p_y.dc_receiver
-			&& p_x.receiver == p_y.receiver);
+		return (p_x.sender == p_y.sender && p_x.dc_sender == p_y.dc_sender && p_x.dc_receiver == p_y.dc_receiver && p_x.receiver == p_y.receiver);
 	};
-
 	void PrintOutPath(const Path& p)
 	{
 		std::cout << p.sender << "->" << p.dc_sender << "->" << p.dc_receiver << "->" << p.receiver << "\n";
-	}
-
+	};
 	Path GetInversePath(const Path & p)
 	{
 		return Path(p.receiver, p.dc_receiver, p.dc_sender, p.sender);
-	}
-
-	bool operator==(const Client& c_x, const Client& c_y)
-	{
-		return (c_x.id == c_y.id);
 	};
-
-	bool operator!=(const Client& c_x, const Client& c_y)
-	{
-		return (c_x.id != c_y.id);
-	}
-
-	bool operator<(const Client& c_x, const Client& c_y)
-	{
-		return (c_x.id < c_y.id);
-	}
-
-	bool ClientComparator_ByDomainSize(const Client& c_x, const Client& c_y)
-	{
-		return (c_x.dc_domain.size() < c_y.dc_domain.size());
-	}
-
-	bool DatacenterComparator_ByExternalBandwidthPrice(const Datacenter& d_x, const Datacenter& d_y)
-	{
-		return (d_x.external_bandwidth_price < d_y.external_bandwidth_price);
-	}
 
 	/*reading data from files, initializing global stuff*/
 	void SimulationBase::Initialize()
@@ -631,13 +607,13 @@ namespace CloudVideoConferencingProblem
 	}
 
 	void SimulationBase::InitializeDomains4Clients(vector<Client> & session_clients)
-	{
-		if (0 == extraConstraintSet.datacenter_proximity_constraint)
+	{		
+		if (additional_contraints.proximity_constraint < 1)
 		{
 			for (auto & c : session_clients)
 			{
 				c.dc_domain.clear();
-				for (auto d : c.ranked_dc_list)
+				for (auto d : global.dc_id_list)
 				{
 					c.dc_domain.push_back(d);
 				}
@@ -647,19 +623,19 @@ namespace CloudVideoConferencingProblem
 		{
 			for (auto & c : session_clients)
 			{				
-				if (extraConstraintSet.datacenter_proximity_constraint > c.ranked_dc_list.size()) /* exception handling */
+				if (additional_contraints.proximity_constraint > c.ranked_dc_list.size()) /* exception handling */
 				{
 					cout << "sth wrong in InitializeDomains4Clients()\n";
 					cin.get();
 					return;
 				}
 				c.dc_domain.clear();
-				for (size_t i = 0; i < extraConstraintSet.datacenter_proximity_constraint; i++)
+				for (size_t i = 0; i < additional_contraints.proximity_constraint; i++)
 				{
 					c.dc_domain.push_back(c.ranked_dc_list.at(i));
 				}
 			}
-		}
+		}	
 	}
 
 	void SimulationBase::FindCheapestDcInDomain4Clients(vector<Client> & session_clients)
@@ -692,7 +668,7 @@ namespace CloudVideoConferencingProblem
 			/*find bad values and remove them from the domain*/
 			for (auto it = c.dc_domain.begin(); it != c.dc_domain.end();)
 			{
-				if (global.client_to_dc_delay_table.at(c.id).at(*it) > path_length_constraint) // unary constraint
+				if (global.client_to_dc_delay_table.at(c.id).at(*it) > end_to_end_delay_constraint) // unary constraint
 				{
 					it = c.dc_domain.erase(it); // remove this value ('it' will point to the value following the removed one)
 				}
@@ -710,11 +686,14 @@ namespace CloudVideoConferencingProblem
 		/*it is node-consistent*/
 		//std::cout << "EnforceNodeConsistency() returns true\n";
 		return true;
-	}
+	}	
 
-	/*a untility function used by EnforceArcConsistency()*/
+	/*a untility function used by EnforceArcConsistency()
+	c_i's domain may be revised according to c_j*/
 	bool SimulationBase::ArcReduce(Client& c_i, const Client& c_j)
 	{
+		if (c_j == c_i) return false;
+		
 		bool domain_reduced = false; // check if domain(c_i) is reduced at the end
 
 		/*find and remove bad values from domain(c_i)*/
@@ -723,7 +702,7 @@ namespace CloudVideoConferencingProblem
 			bool to_be_removed = true; // check if d_i should be removed		
 			for (auto& d_j : c_j.dc_domain)
 			{				
-				if (GetPathLength(Path(c_i.id, *d_i, d_j, c_j.id)) <= path_length_constraint) // binary constraint
+				if (GetPathLength(Path(c_i.id, *d_i, d_j, c_j.id)) <= end_to_end_delay_constraint) // binary constraint
 				{
 					to_be_removed = false; // no need to remove d_i in c_i's domain because we can find a consistent value d_j in c_j's domain
 					break;
@@ -744,24 +723,23 @@ namespace CloudVideoConferencingProblem
 	/*enforce arc consistency
 	return true iff every client's dc_domain is non-empty after removing inconsistent values based on binary constraints
 	a classic (mostly used) arc consistency enforcing algorithm: https://en.wikipedia.org/wiki/AC-3_algorithm */
-	bool SimulationBase::EnforceArcConsistency(vector<Client>& session_clients)
-	{
-		/*'worklist' contains all arcs we wish to prove consistent or not.*/
-		vector<pair<reference_wrapper<Client>, reference_wrapper<Client>>> worklist;
-		for (auto& c_i : session_clients)
+	bool SimulationBase::EnforceArcConsistency(vector<Client>& session_clients, const size_t k)
+	{	
+		//"worklist" contains the arcs (directed client pair) to be enforced for consistency (including clients from k to end)
+		vector<pair<Client*, Client*>> worklist;
+		for (size_t i = k; i < session_clients.size(); i++)
 		{
-			for (auto& c_j : session_clients)
+			for (size_t j = k; j < session_clients.size(); j++)
 			{
-				if (c_j.id != c_i.id)
+				if (session_clients.at(j) != session_clients.at(i))
 				{
-					/*using reference_wrapper such that the item being pushed to the vector is not a copy but a reference*/
-					worklist.push_back(pair<reference_wrapper<Client>, reference_wrapper<Client>>(c_i, c_j));
+					worklist.push_back(pair<Client*, Client*>(&session_clients.at(i), &session_clients.at(j)));
 				}
 			}
 		}
-
+		
 		/*reduce domain values by checking the consistency of one arc at a time*/
-		while (false == worklist.empty())
+		while (!worklist.empty())
 		{
 			/*select one arc from worklist and remove it from the list*/
 			auto arc = worklist.back();
@@ -770,25 +748,65 @@ namespace CloudVideoConferencingProblem
 			/*work on this arc by applying ArcReduce()*/
 			auto c_i = arc.first;
 			auto c_j = arc.second;
-			if (ArcReduce(c_i, c_j))
+			if (ArcReduce(*c_i, *c_j))
 			{
-				/*if domain(c_i) is empty, return false*/
-				if (c_i.get().dc_domain.empty())
+				/*if domain(c_i) is empty, return false*/				
+				if (c_i->dc_domain.empty())
 				{
 					//std::cout << "EnforceArcConsistency() returns false\n";
 					return false;
 				}
 
-				/*update worklist by adding every arc (c_k, c_i) (k != j and k != i) which is pointing to c_i*/
-				for (auto& c_k : session_clients)
+				/*update worklist by adding every arc (c_h, c_i) (h >= k && h != j && h != i) which is pointing to c_i as c_i's domain may be revised subject to c_j*/
+				for (size_t h = k; h < session_clients.size(); h++)
 				{
-					if ((c_k.id != c_j.get().id) && (c_k.id != c_i.get().id))
+					if (session_clients.at(h) != *c_j && session_clients.at(h) != *c_i)
 					{
-						worklist.push_back(pair<reference_wrapper<Client>, reference_wrapper<Client>>(c_k, c_i));
+						worklist.push_back(pair<Client*, Client*>(&session_clients.at(h), c_i));
 					}
 				}
 			}
 		}
+		
+		////"worklist" contains all arcs we wish to prove consistent or not
+		//vector<pair<reference_wrapper<Client>, reference_wrapper<Client>>> worklist; //using reference_wrapper such that the item being pushed to the vector is not a copy but a reference
+		//for (size_t i = k; i < session_clients.size(); i++)
+		//{
+		//	for (size_t j = k; j < session_clients.size(); j++)
+		//	{
+		//		if (session_clients.at(j) != session_clients.at(i))
+		//		{					
+		//			worklist.push_back(pair<reference_wrapper<Client>, reference_wrapper<Client>>(session_clients.at(i), session_clients.at(j)));
+		//		}
+		//	}
+		//}
+		////reduce domain values by checking the consistency of one arc at a time
+		//while (!worklist.empty())
+		//{
+		//	/*select one arc from worklist and remove it from the list*/
+		//	auto arc = worklist.back();
+		//	worklist.pop_back();
+		//	/*work on this arc by applying ArcReduce()*/
+		//	auto c_i = arc.first;
+		//	auto c_j = arc.second;
+		//	if (ArcReduce(c_i, c_j))
+		//	{
+		//		/*if domain(c_i) is empty, return false*/
+		//		if (c_i.get().dc_domain.empty())
+		//		{
+		//			//std::cout << "EnforceArcConsistency() returns false\n";
+		//			return false;
+		//		}
+		//		/*update worklist by adding every arc (c_k, c_i) (k != j and k != i) which is pointing to c_i*/
+		//		for (size_t h = k; h < session_clients.size(); h++)
+		//		{
+		//			if ((session_clients.at(h).id != c_j.get().id) && (session_clients.at(h).id != c_i.get().id))
+		//			{
+		//				worklist.push_back(pair<reference_wrapper<Client>, reference_wrapper<Client>>(session_clients.at(h), c_i));
+		//			}
+		//		}
+		//	}
+		//}
 
 		/*it can be arc-consistent*/
 		//std::cout << "EnforceArcConsistency() returns true\n";
@@ -801,110 +819,257 @@ namespace CloudVideoConferencingProblem
 		if (EnforceNodeConsistency(session_clients))
 		{
 			if (EnforceArcConsistency(session_clients))
-			{
-				//std::cout << "EnforceLocalConsistency() returns true\n";
+			{				
 				return true;
 			}
 		}
 
-		//std::cout << "EnforceLocalConsistency() returns false\n";
 		return false;
 	}
 
-	/*a utility function to check if the assignment to client k is consistent with the previous assignments*/
-	bool SimulationBase::IsValidPartialSolution(const vector<Client>& session_clients, const size_t k, const vector<ID>& session_assignment, const ID d_k)
-	{
-		/*check whether this assignment for client k will violate a constraint between k'th and one of the previous 0'th to (k - 1)'th clients*/
+	/*a utility function to check if the assignment to client k is consistent with any of the previous assignments*/
+	bool SimulationBase::BackwardChecking(const vector<Client>& session_clients, const size_t k, const vector<ID>& session_assignment)
+	{	
+		// BackwardChecking: return false (i.e., inconsistent) if it will violate the constraint between k'th and any of the previous 0'th to (k - 1)'th clients
 		for (size_t i = 0; i < k; i++)
 		{			
-			if (GetPathLength(Path(session_clients.at(k).id, d_k, session_assignment.at(i), session_clients.at(i).id)) > path_length_constraint ||
-				GetPathLength(Path(session_clients.at(i).id, session_assignment.at(i), d_k, session_clients.at(k).id)) > path_length_constraint)
-			{
-				return false;
+			if (GetPathLength(Path(session_clients.at(k).id, session_assignment.at(k), session_assignment.at(i), session_clients.at(i).id)) > end_to_end_delay_constraint ||
+				GetPathLength(Path(session_clients.at(i).id, session_assignment.at(i), session_assignment.at(k), session_clients.at(k).id)) > end_to_end_delay_constraint)
+			{				
+				return false; // backtrack (impossible to find any solution along this way)
 			}
 		}
 
-		/*consider the solution_cardinality_constraint only if it is != 0*/
-		if (extraConstraintSet.solution_cardinality_constraint != 0)
-		{
-			set<ID> chosen_dc_subset(session_assignment.begin(), session_assignment.begin() + k); // k'th not included
-			chosen_dc_subset.insert(d_k);
-			if (chosen_dc_subset.size() > extraConstraintSet.solution_cardinality_constraint)
-			{ 
-				return false; 
-			}
-		}
-
-		return true;
+		return true; // go deeper (still possible to find a solution along this way)
 	}
 
-	/*a utility employed by AssignClient_ConstrainedOptimization4Cost() for bounding*/
-	bool SimulationBase::IsWorthExtension(const vector<Client>& session_clients, const size_t k, const vector<ID>& session_assignment, const ID d_k, const double optimal_cost)
+	/*enforce partial arc consistency between current client and every future client*/
+	bool SimulationBase::ForwardChecking(vector<Client>& session_clients, const size_t k, const vector<ID>& session_assignment)
 	{
-		/*of course this extension is worth because none has been found yet*/
-		if (0 == num_discovered_solutions) { return true; }
+		//ForwardChecking: enforce partial arc consistency between current client and every future client
+		if (k < (session_clients.size() - 1))
+		{
+			auto current_client = session_clients.at(k); // work on its copy to avoid modifying the domain of original client k
+			current_client.dc_domain.assign(1, session_assignment.at(k)); // modify its copy's domain
+			
+			map<size_t, list<ID>> local_domain_backup; // for the future clients					
+			for (size_t i = k + 1; i < session_clients.size(); i++)
+			{
+				local_domain_backup[i] = session_clients.at(i).dc_domain; // for restoring
+				ArcReduce(session_clients.at(i), current_client); // revise the domain of session_clients.at(i) s.t. to current client
+				if (session_clients.at(i).dc_domain.empty())
+				{					
+					for (size_t j = k + 1; j <= i; j++) { session_clients.at(j).dc_domain = local_domain_backup.at(j); } // restore before backtracking
+										
+					return false; // backtrack (impossible to find any solution along this way)
+				}
+			}
+		}
+		
+		return true; // go deeper (still possible to find a solution along this way)
+	}
 
-		/*compute the cost lower bound by ignoring the relay traffic cost*/
+	/*enforce full arc consistency among current and future clients*/
+	bool SimulationBase::LookAhead(vector<Client>& session_clients, const size_t k, const vector<ID>& session_assignment)
+	{
+		/*LookAhead: enforce full arc consistency among current and future clients*/
+		if (k < (session_clients.size() - 1))
+		{
+			map<size_t, list<ID>> local_domain_backup; // for avoiding using each client's dc_domain_backup
+			for (size_t i = k; i < session_clients.size(); i++)
+			{
+				local_domain_backup[i] = session_clients.at(i).dc_domain;
+			}
+			bool is_arc_consistent = EnforceArcConsistency(session_clients, k);
+			session_clients.at(k).dc_domain = local_domain_backup.at(k); // restore client k's domain
+			if (!is_arc_consistent)
+			{ 
+				// restore before backtracking
+				for (size_t i = k + 1; i < session_clients.size(); i++) 
+				{ 
+					session_clients.at(i).dc_domain = local_domain_backup.at(i); 
+				}
+								
+				return false; // backtrack (impossible to find any solution along this way)
+			}
+		}
+
+		return true; // go deeper (still possible to find a solution along this way)
+	}
+
+	/*a utility for bounding*/
+	bool SimulationBase::ViolateCardinalityConstraint(const size_t k, const vector<ID>& session_assignment)
+	{		
+		if (additional_contraints.cardinality_constraint >= 1)
+		{
+			set<ID> chosen_dc_set(session_assignment.begin(), session_assignment.begin() + k + 1);
+			
+			if (chosen_dc_set.size() > additional_contraints.cardinality_constraint) 
+				return true;
+		}
+
+		return false;
+	}
+	
+	/*a utility for bounding*/
+	bool SimulationBase::CannotImproveCost(const vector<Client>& session_clients, const size_t k, const vector<ID>& session_assignment)
+	{
+		/*not sure as we haven't found any solution yet*/
+		if (num_discovered_solutions < 1) 
+			return false;
+
+		/*compute the cost lower bound by ignoring the forwarding traffic cost*/
 		double cost_lower_bound = 0;
 		for (size_t i = 0; i < session_clients.size(); i++)
 		{
-			if (i < k) // previous 0'th to (k - 1)'th assigned clients
+			if (i <= k) // assigned clients
 			{
-				cost_lower_bound += session_clients.at(i).incoming_data_amount * global.datacenter.at(session_assignment.at(i)).external_bandwidth_price; // use session_assignment.at(i)
-			}
-			else if (k == i) // the k'th client
-			{
-				cost_lower_bound += session_clients.at(i).incoming_data_amount * global.datacenter.at(d_k).external_bandwidth_price; // use d_k
+				cost_lower_bound += session_clients.at(i).incoming_data_amount * global.datacenter.at(session_assignment.at(i)).external_bandwidth_price;
 			}
 			else // unassigned clients
 			{
 				cost_lower_bound += session_clients.at(i).incoming_data_amount * global.datacenter.at(session_clients.at(i).cheapest_dc).external_bandwidth_price; // use cheapest_dc
 			}
 		}
-		return (cost_lower_bound < optimal_cost);
-	}	
 
-	/*use first_solution_only to control whether it will terminate after finding the first solution*/
+		// return false only if we are sure that the lower bound is not smaller than the current optimal
+		return (cost_lower_bound >= optimal_cost);
+	}
+		
+	/*simple backtracking using backward checking*/
 	void SimulationBase::AssignClient(const vector<Client> & session_clients, const size_t k, vector<ID> & session_assignment, const bool first_solution_only)
-	{		
+	{	
 		/*go through every value (i.e., dc) in this variable's (i.e., client's) domain (i.e., the set of assignment options)*/
-		for (auto dc : session_clients.at(k).dc_domain)
-		{
+		const auto current_client_domain = session_clients.at(k).dc_domain;
+		for (const auto dc : current_client_domain)
+		{	
+			// early stop?
 			if (1 == num_discovered_solutions)
 			{
 				time_latency_stage = difftime(clock(), starting_time);
+				
+				/*use first_solution_only to switch between the mode of discovering one or all solutions*/
 				if (first_solution_only) { return; }
-			}
+			}			
 			
-			if (IsValidPartialSolution(session_clients, k, session_assignment, dc))
+			// assignment for k'th variable
+			session_assignment.at(k) = dc;
+
+			// check bounding conditions
+			if (ViolateCardinalityConstraint(k, session_assignment) || CannotImproveCost(session_clients, k, session_assignment))
+				continue;
+
+			// backward checking
+			if (BackwardChecking(session_clients, k, session_assignment))
 			{
-				if (IsWorthExtension(session_clients, k, session_assignment, dc, optimal_cost))
+				// a complete solution is discovered
+				if (k == (session_clients.size() - 1))
 				{
-					// assignment for k'th variable
-					session_assignment.at(k) = dc;
+					// count this solution
+					num_discovered_solutions++;
 
-					// a complete solution is discovered
-					if (k == (session_clients.size() - 1))
+					// get the cost of this assignment solution
+					double this_cost = GetSessionCostAfterAssignment(session_clients, session_assignment);
+
+					// firstly check if this is the first solution before comparison
+					if ((1 == num_discovered_solutions) || (this_cost < optimal_cost))
 					{
-						// count this solution
-						num_discovered_solutions++;
-
-						// get the cost of this assignment solution
-						double this_cost = GetSessionCostAfterAssignment(session_clients, session_assignment);
-
-						// firstly check if this is the first solution before comparison
-						if ((1 == num_discovered_solutions) || (this_cost < optimal_cost))
-						{
-							optimal_cost = this_cost;
-							optimal_assignment = session_assignment;
-						}						
-					}
-					else // continue on extending the partial solution
-					{
-						AssignClient(session_clients, k + 1, session_assignment, first_solution_only);
+						optimal_cost = this_cost;
+						optimal_assignment = session_assignment;
 					}
 				}
+				else // continue to extend the partial solution towards a complete solution
+				{
+					AssignClient(session_clients, k + 1, session_assignment, first_solution_only);
+				}
 			}
+		}
+	}
+
+	/*backtracking with forward checking*/
+	void SimulationBase::AssignClient_FC(vector<Client> & session_clients, const size_t k, vector<ID> & session_assignment)
+	{		
+		/*go through every value (i.e., dc) in this variable's (i.e., client's) domain (i.e., the set of assignment options)*/
+		const auto current_client_domain = session_clients.at(k).dc_domain;
+		for (const auto dc : current_client_domain)
+		{
+			// FC only works for CSP (constraint satisfaction, i.e., one solution) but not COP (constraint optimization, i.e., best solution)
+			if (1 == num_discovered_solutions)
+				return;			
+
+			// assignment for k'th variable
+			session_assignment.at(k) = dc;
+
+			// check bounding conditions
+			if (ViolateCardinalityConstraint(k, session_assignment) || CannotImproveCost(session_clients, k, session_assignment))
+				continue;
+
+			// a complete solution is discovered
+			if (k == (session_clients.size() - 1))
+			{
+				// count this solution
+				num_discovered_solutions++;
+
+				// get the cost of this assignment solution
+				double this_cost = GetSessionCostAfterAssignment(session_clients, session_assignment);
+
+				// firstly check if this is the first solution before comparison
+				if ((1 == num_discovered_solutions) || (this_cost < optimal_cost))
+				{
+					optimal_cost = this_cost;
+					optimal_assignment = session_assignment;
+				}
+			} 
+			else // continue to extend the partial solution towards a complete solution if ForwardChecking() suggests
+			{			
+				if (ForwardChecking(session_clients, k, session_assignment))
+				{
+					AssignClient_FC(session_clients, k + 1, session_assignment);
+				}				
+			}		
+		}
+	}
+
+	/*backtracking with look ahead*/
+	void SimulationBase::AssignClient_LA(vector<Client> & session_clients, const size_t k, vector<ID> & session_assignment)
+	{		
+		/*go through every value (i.e., dc) in this variable's (i.e., client's) domain (i.e., the set of assignment options)*/
+		const auto current_client_domain = session_clients.at(k).dc_domain; 
+		for (const auto dc : current_client_domain)
+		{			
+			// LA only works for CSP (constraint satisfaction, i.e., one solution) but not COP (constraint optimization, i.e., best solution)
+			if (1 == num_discovered_solutions)
+				return;
+
+			// assignment for client k
+			session_assignment.at(k) = dc;
+
+			// check bounding conditions
+			if (ViolateCardinalityConstraint(k, session_assignment) || CannotImproveCost(session_clients, k, session_assignment)) 
+				continue;
+									
+			if (k == (session_clients.size() - 1)) // a complete solution is discovered
+			{
+				// count this solution
+				num_discovered_solutions++;
+
+				// get the cost of this assignment solution
+				double this_cost = GetSessionCostAfterAssignment(session_clients, session_assignment);
+
+				// firstly check if this is the first solution before comparison
+				if ((1 == num_discovered_solutions) || (this_cost < optimal_cost))
+				{
+					optimal_cost = this_cost;
+					optimal_assignment = session_assignment;
+				}
+			}
+			else // continue to extend the partial solution towards a complete solution if LookAhead() suggests
+			{				
+				if (LookAhead(session_clients, k, session_assignment))
+				{
+					AssignClient_FC(session_clients, k + 1, session_assignment); 
+				}				
+			}		
 		}
 	}
 	
@@ -936,7 +1101,7 @@ namespace CloudVideoConferencingProblem
 			for (auto session_clients : random_sessions)
 			{
 				CP(session_clients, latency_tradeoff_rate);
-				latency_measure_CP.push_back(path_length_constraint);
+				latency_measure_CP.push_back(end_to_end_delay_constraint);
 				cost_measure_CP.push_back(optimal_cost);
 				set<ID> solution_dc_set_CP(optimal_assignment.begin(), optimal_assignment.end());
 				solution_cardinality_CP.push_back((double)solution_dc_set_CP.size());
@@ -965,30 +1130,30 @@ namespace CloudVideoConferencingProblem
 	void OptimizingCostByTradingOffLatency::CP(vector<Client> & session_clients, const double latency_tradeoff_rate)
 	{
 		/*find the optimal latency*/
-		path_length_constraint = GetSessionLatencyLowerBound(session_clients); // initialize by the lower bound
+		end_to_end_delay_constraint = GetSessionLatencyLowerBound(session_clients); // initialize by the lower bound
 		while (true)
 		{									
 			InitializeDomains4Clients(session_clients); // initialize every client's dc_domain	
 			num_discovered_solutions = 0;			
 			if (EnforceLocalConsistency(session_clients))
 			{
-				FindCheapestDcInDomain4Clients(session_clients); //required by IsWorthExtension()
+				FindCheapestDcInDomain4Clients(session_clients); //required by CannotImproveCost()
 				std::sort(session_clients.begin(), session_clients.end(), ClientComparator_ByDomainSize); // sorting can improve the efficiency substantially
 				vector<ID> session_assignment(session_clients.size());
-				AssignClient(session_clients, 0, session_assignment, true); // begin with the first client (i.e., the 0'th client)
+				AssignClient(session_clients, 0, session_assignment, false); // begin with the first client (i.e., the 0'th client)
 			}
 
 			if (1 == num_discovered_solutions) break;
-			else path_length_constraint++; // increment
+			else end_to_end_delay_constraint++; // increment
 		}
 
 		/*find the optimal cost with latency tradoff*/
-		path_length_constraint *= (1 + latency_tradeoff_rate);
+		end_to_end_delay_constraint *= (1 + latency_tradeoff_rate);
 		InitializeDomains4Clients(session_clients);
 		num_discovered_solutions = 0;		
 		if (EnforceLocalConsistency(session_clients))
 		{			
-			FindCheapestDcInDomain4Clients(session_clients); //required by IsWorthExtension()
+			FindCheapestDcInDomain4Clients(session_clients); //required by CannotImproveCost()
 			std::sort(session_clients.begin(), session_clients.end(), ClientComparator_ByDomainSize); // sorting can improve the efficiency substantially			
 			vector<ID> session_assignment(session_clients.size());
 			AssignClient(session_clients, 0, session_assignment, false); // begin with the first client (i.e., the 0'th client)
@@ -1025,21 +1190,24 @@ namespace CloudVideoConferencingProblem
 		}
 				
 		/*perform experiments*/
-		vector<string> alg_name_list = { "CP(1,0)", "CP(0,1)", "CP(0,2)", "CP(0,3)", "CP(0,4)", "CP(0,5)" };
-		auto resultContainer = Result(alg_name_list);
-		vector<Constraint> alg_constraint_list = { Constraint(1,0), Constraint(0,1), Constraint(0,2), Constraint(0,3), Constraint(0,4), Constraint(0,5) };
+		//vector<Constraint> alg_constraint_list = { Constraint(1,0), Constraint(0,1), Constraint(0,2), Constraint(0,3), Constraint(0,4), Constraint(0,5), Constraint(0,0) };
+		//vector<string> alg_name_list = { "CP(1,0)", "CP(0,1)", "CP(0,2)", "CP(0,3)", "CP(0,4)", "CP(0,5)", "CP(0,0)" };
+		vector<string> alg_name_list = { "CP" };
+		auto resultContainer = Result(alg_name_list);		
 		for (int i = 0; i < alg_name_list.size(); i++)
 		{
 			auto alg_name = alg_name_list.at(i);
 			for (auto session_clients : random_sessions)
 			{
-				auto solution = CP(session_clients, alg_constraint_list.at(i));
+				Solution solution;
+				if ("CP" == alg_name) solution = CP(session_clients);				
+
 				resultContainer.time_total_result.at(alg_name).push_back(time_latency_stage + time_cost_stage);
 				if ((time_latency_stage + time_cost_stage) > 0)
 					resultContainer.time_proportion_result.at(alg_name).push_back(time_latency_stage / (time_latency_stage + time_cost_stage));
 				else
 					resultContainer.time_proportion_result.at(alg_name).push_back(0);
-				resultContainer.latency_result.at(alg_name).push_back(solution.latency);
+				resultContainer.latency_result.at(alg_name).push_back(end_to_end_delay_constraint);
 				resultContainer.cost_result.at(alg_name).push_back(solution.cost);
 				resultContainer.cardinality_result.at(alg_name).push_back(solution.cardinality);
 				for (auto it : solution.assignedDc_ranking) { resultContainer.assignedDc_ranking_result.at(alg_name).push_back(it); }
@@ -1148,7 +1316,7 @@ namespace CloudVideoConferencingProblem
 		
 		// time
 		string buffer = "";
-		for (auto algName : { "CP(0,2)", "CP(0,3)", "CP(0,4)", "CP(0,5)" })
+		for (auto algName : alg_name_list)
 		{
 			buffer += std::to_string(GetMeanValue(resultContainer.time_total_result.at(algName))) + ",";
 		}
@@ -1156,7 +1324,7 @@ namespace CloudVideoConferencingProblem
 		time_file << buffer;
 		
 		buffer = "";
-		for (auto algName : { "CP(0,2)", "CP(0,3)", "CP(0,4)", "CP(0,5)" })
+		for (auto algName : alg_name_list)
 		{
 			buffer += std::to_string(GetPercentile(resultContainer.time_total_result.at(algName), 99)) + ",";
 		}
@@ -1164,7 +1332,7 @@ namespace CloudVideoConferencingProblem
 		time_max_file << buffer;
 		
 		buffer = "";
-		for (auto algName : { "CP(0,2)", "CP(0,3)", "CP(0,4)", "CP(0,5)" })
+		for (auto algName : alg_name_list)
 		{
 			buffer += std::to_string(GetMeanValue(resultContainer.time_proportion_result.at(algName))) + ",";
 		}
@@ -1172,7 +1340,7 @@ namespace CloudVideoConferencingProblem
 		time_proportion_file << buffer;
 		
 		buffer = "";
-		for (auto algName : { "CP(0,2)", "CP(0,3)", "CP(0,4)", "CP(0,5)" })
+		for (auto algName : alg_name_list)
 		{
 			buffer += std::to_string(GetPercentile(resultContainer.time_proportion_result.at(algName), 99)) + ",";
 		}
@@ -1204,8 +1372,9 @@ namespace CloudVideoConferencingProblem
 		buffer.pop_back();
 		cost_file << buffer;		
 
+		// cardinality_CDF_file
 		buffer = "";
-		for (auto algName : { "CP(1,0)", "CP(0,5)" })
+		for (auto algName : alg_name_list)
 		{
 			for (auto it : resultContainer.cardinality_result.at(algName))
 			{
@@ -1216,8 +1385,9 @@ namespace CloudVideoConferencingProblem
 		}
 		cardinality_CDF_file << buffer;
 		
+		// ranking_CDF_file
 		buffer = "";
-		for (auto algName : { "CP(0,1)", "CP(0,5)" })
+		for (auto algName : alg_name_list)
 		{
 			for (auto it : resultContainer.assignedDc_ranking_result.at(algName))
 			{
@@ -1227,15 +1397,6 @@ namespace CloudVideoConferencingProblem
 			buffer.push_back('\n');
 		}
 		ranking_CDF_file << buffer;
-		
-		/*close files*/
-		time_file.close();
-		time_max_file.close();
-		latency_file.close();
-		latency_max_file.close();
-		cost_file.close();
-		cardinality_CDF_file.close();
-		ranking_CDF_file.close();
 
 		ofstream allClientPair_location_dist_file(this_output_directory + std::to_string(sim_setting.session_size) + "_" + "allClientPair_location_dist.csv");
 		DumpLabeledMatrixToDisk(allClientPairs_location_dist, global.dc_name_list, this_output_directory + std::to_string(sim_setting.session_size) + "_" + "allClientPair_location_dist.csv");
@@ -1245,27 +1406,31 @@ namespace CloudVideoConferencingProblem
 		DumpLabeledMatrixToDisk(farthestClientPair_location_dist_CP, global.dc_name_list, this_output_directory + std::to_string(sim_setting.session_size) + "_" + "farthestClientPair_location_dist_CP.csv");*/
 	}
 
-	Solution OptimizingLatencyFirst::CP(vector<Client> session_clients, const Constraint & input_extraConstraintSet)
+	/*AssignClient()*/
+	Solution OptimizingLatencyFirst::CP(vector<Client> session_clients, const Constraint & input_additional_contraints)
 	{		
-		extraConstraintSet = input_extraConstraintSet;		
-		path_length_constraint = GetSessionLatencyLowerBound(session_clients);
+		additional_contraints = input_additional_contraints;		
+		end_to_end_delay_constraint = GetSessionLatencyLowerBound(session_clients);		
 		starting_time = clock();
+
 		while (true)
 		{
-			InitializeDomains4Clients(session_clients);	
+			InitializeDomains4Clients(session_clients);
 			num_discovered_solutions = 0;
 			vector<ID> session_assignment(session_clients.size());
-			if (EnforceLocalConsistency(session_clients)) /* if EnforceLocalConsistency() returns false, no need to run AssignClient() */
-			{				
-				std::sort(session_clients.begin(), session_clients.end(), ClientComparator_ByDomainSize); // sorting can improve the efficiency substantially				
-				FindCheapestDcInDomain4Clients(session_clients); // required by IsWorthExtension() for searching cost-optimal solution
-				AssignClient(session_clients, 0, session_assignment, false); // begin with the first client (i.e., the 0'th client)				
+			if (EnforceLocalConsistency(session_clients)) /* if EnforceLocalConsistency() returns false, no need to run AssignClient_BC() */
+			{
+				std::sort(session_clients.begin(), session_clients.end(), ClientComparator_ByDomainSize); // sorting can improve the efficiency substantially
+				FindCheapestDcInDomain4Clients(session_clients); // required by CannotImproveCost() for searching cost-optimal solution				
+				AssignClient(session_clients, 0, session_assignment, false); // begin with the first client (i.e., the 0'th client)
 			}
 
 			if (num_discovered_solutions > 0) break; /* break the loop as we have found at least one feasible solution */
-			else path_length_constraint++; /* loosen the constraint and continue to loop */
+			else end_to_end_delay_constraint++; /* loosen the constraint and continue to loop */
 		}
-		time_cost_stage = difftime(clock(), starting_time) - time_latency_stage;
+
+		time_cost_stage = difftime(clock(), starting_time) - time_latency_stage;		
+
 		return GetSessionSolutionInfoAfterAssignment(session_clients, optimal_assignment);
 	}
 

@@ -45,7 +45,7 @@ set(gca, 'XTickLabel', region_name_list, 'XTickLabelRotation', 45);
 set(gca, 'YTickLabel', region_name_list, 'YTickLabelRotation', 0);
 xlabel('', 'FontSize', 14);
 ylabel('', 'FontSize', 14);
-title('Pairwise end-to-end latencies of EC2 datacenters (msec)');
+title('Pairwise latencies of EC2 datacenters [msec]');
 
 export_fig dc_to_dc_latency.pdf -transparent
 

@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <thread>
 #include <mutex>
+#include <math.h>
 #include <direct.h>
 
 using namespace std;
