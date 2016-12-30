@@ -61,15 +61,15 @@ namespace CloudVideoConferencingProblem
 
 	struct Setting
 	{		
-		size_t session_size;
-		size_t session_count;
+		size_t session_size;		
 		bool region_control;
+		size_t session_count;
 
-		Setting(const size_t given_session_size, const size_t given_session_count, const bool given_region_control)
+		Setting(const size_t given_session_size, const bool given_region_control = false, const size_t given_session_count = 1000)
 		{
-			session_size = given_session_size;
-			session_count = given_session_count;
+			session_size = given_session_size;			
 			region_control = given_region_control;
+			session_count = given_session_count;
 		}
 
 		Setting() {}
@@ -103,46 +103,30 @@ namespace CloudVideoConferencingProblem
 		double latency; // the bound of the interaction latency of between any client pair
 		double cost; // the total traffic cost
 		int cardinality; // the number of selected datacenters
-		vector<int> assignedDc_ranking;
+		vector<int> proximity;
 	};
 
 	struct Result
 	{
-		map<string, vector<double>> time_total_result;
-		map<string, vector<double>> time_proportion_result; // the proportion of time spent on optimizing the latency
+		map<string, vector<double>> time_result;
 		map<string, vector<double>> latency_result;
 		map<string, vector<double>> cost_result;
-		map<string, vector<int>> cardinality_result;
-		map<string, vector<int>> assignedDc_ranking_result;
+		map<string, vector<double>> cardinality_result;		
+		map<string, vector<double>> proximity_result;
 		map<string, map<pair<string, string>, int>> farthestClientPair_dist_result;
 
 		Result(const vector<string> algName_list)
 		{
 			for (string algName : algName_list)
 			{
-				time_total_result.insert({ algName, vector<double>() });
-				time_proportion_result.insert({ algName, vector<double>() });
+				time_result.insert({ algName, vector<double>() });
 				latency_result.insert({ algName, vector<double>() });
 				cost_result.insert({ algName, vector<double>() });
-				cardinality_result.insert({ algName, vector<int>() });
-				assignedDc_ranking_result.insert({ algName, vector<int>() });
+				cardinality_result.insert({ algName, vector<double>() });
+				proximity_result.insert({ algName, vector<double>() });
 				farthestClientPair_dist_result.insert({ algName, map<pair<string, string>, int>() });
 			}
 		}
-	};
-
-	struct Constraint
-	{			
-		size_t proximity_constraint; // if top_k is 0, then all dc's are put into each client's domain, otherwise, only consider top_k dc's (k-nearest dc's)
-		size_t cardinality_constraint; // i.e., the allowed maximum number of datacenters appearing in the solution (if it is 0, this constraint is ignored)
-
-		Constraint(const size_t proximity_constraint_in, const size_t cardinality_constraint_in)
-		{
-			proximity_constraint = proximity_constraint_in;
-			cardinality_constraint = cardinality_constraint_in;
-		}
-
-		Constraint() {}
 	};
 
 	class SimulationBase
@@ -150,9 +134,8 @@ namespace CloudVideoConferencingProblem
 	protected:
 		void Initialize();
 		bool isInitialized = false;
-		Global global;
-
-		void RankDatacenters4Client(Client&, const vector<ID>&);
+		Global global;		
+		void RankDcByProximity4Client(Client&, const vector<ID>&);
 		int GetAssignedDcRanking(const Client&, const ID);		
 						
 		double GetPathLength(const Path&);
@@ -177,8 +160,9 @@ namespace CloudVideoConferencingProblem
 		bool ArcReduce(Client &, const Client &);
 		bool EnforceLocalConsistency(vector<Client> &);	// including node (unary) and arc (binary)
 		void InitializeDomains4Clients(vector<Client> &);
-		void FindCheapestDcInDomain4Clients(vector<Client> &);		
-		void AssignClient(const vector<Client> &, const size_t, vector<ID> &, const bool first_solution_only);
+		void FindCheapestDcInDomain4Clients(vector<Client> &); // used together with AssignClient_FindAllSolutions()		
+		void AssignClient(const vector<Client> &, const size_t, vector<ID> &);
+		void AssignClient_FindAllSolutions(const vector<Client> &, const size_t, vector<ID> &);
 		void AssignClient_FC(vector<Client> &, const size_t, vector<ID> &);
 		void AssignClient_LA(vector<Client> &, const size_t, vector<ID> &);
 		bool BackwardChecking(const vector<Client> &, const size_t, const vector<ID> &);
@@ -187,16 +171,17 @@ namespace CloudVideoConferencingProblem
 		
 		/*branch and bound*/
 		bool ViolateCardinalityConstraint(const size_t k, const vector<ID>&);
-		bool CannotImproveCost(const vector<Client> &, const size_t, const vector<ID> &);
+		bool CannotImproveCost(const vector<Client> &, const size_t, const vector<ID> &); // require FindCheapestDcInDomain4Clients()
 
-		double end_to_end_delay_constraint; // i.e., the allowed maximum one-way latency between any client pair
-		Constraint additional_contraints;
+		double latency_constraint = 0; // the allowed maximum one-way latency between any client pair
+		size_t proximity_constraint = 0; // if top_k is 0, then all dc's are put into each client's domain, otherwise, only consider top_k dc's (k-nearest dc's)
+		size_t cardinality_constraint = 0; // the allowed maximum number of datacenters appearing in the solution (if it is 0, this constraint is ignored)
+
+		const double latency_constraint_delta = 1;
+
 		size_t num_discovered_solutions = 0; // always remember to reset it to 0
 		double optimal_cost;
 		vector<ID> optimal_assignment;
-		clock_t starting_time;
-		double time_latency_stage = 0;
-		double time_cost_stage = 0;
 	};
 
 	class DatasetAnalysis : public SimulationBase
@@ -206,27 +191,19 @@ namespace CloudVideoConferencingProblem
 		void Check_InterDcNetwork_Advantage();
 		void Get_DelayToNearestDc_CDF();
 		void Get_ShortestPathLength_CDF();
-	};
+	};	
 
-	class OptimizingCostByTradingOffLatency : public SimulationBase
-	{
-	public:		
-		void Simulate(const Setting &);
-		string local_output_directory = "OptimizingCostByTradingOffLatency\\";
-
-	private:				
-		void CP(vector<Client> &, const double);		
-	};
-
-	class OptimizingLatencyFirst : public SimulationBase
+	class MultilevelOptimization : public SimulationBase
 	{
 	public:
 		void Simulate(const Setting &);
-		string local_output_directory = "OptimizingLatencyFirst\\";
+		string local_output_directory = "MultilevelOptimization\\";
 
 	private:
-		Solution CP(vector<Client>, const Constraint & input_additional_contraints = Constraint(0, 0));
+		Solution CP(vector<Client>);
+		Solution CP_Card(vector<Client>, const size_t given_cardinality_constraint = 0);
+		Solution CP_Prox(vector<Client>, const size_t given_proximity_constraint = 0); // if using the default parameter, it is equivalent to CP() because InitializeDomains4Clients() orders the values for each variable according to proximity
 	};
 
-	void RunSimulation_OptimizingLatencyFirst(const Setting &);
+	void RunSimulation_MultilevelOptimization(const Setting &);
 }

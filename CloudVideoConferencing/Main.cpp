@@ -120,12 +120,17 @@ int main(int argc, char *argv[])
 	/*vector<thread> workers;
 	for (size_t session_size = 4; session_size <= 10; session_size += 2)
 	{
-		workers.push_back(thread(RunSimulation_OptimizingLatencyFirst, Setting(session_size, 300, false)));
-		workers.push_back(thread(RunSimulation_OptimizingLatencyFirst, Setting(session_size, 300, true)));
+		workers.push_back(thread(RunSimulation_MultilevelOptimization, Setting(session_size, 300, false)));
+		workers.push_back(thread(RunSimulation_MultilevelOptimization, Setting(session_size, 300, true)));
 	}
 	std::for_each(workers.begin(), workers.end(), [](thread &t) { t.join(); });*/
 
-	RunSimulation_OptimizingLatencyFirst(Setting(8, 10, false));
+	for (size_t session_size = 4; session_size <= 20; session_size += 4) // for (size_t session_size : {15, 20, 25})
+	{
+		auto startTime = clock();
+		RunSimulation_MultilevelOptimization(Setting(session_size));
+		cout << "session size: " << session_size << " => " << "total running time: " << difftime(clock(), startTime) / 1000 << " seconds\n";
+	}
 
 	return 0;
 }

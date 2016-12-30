@@ -57,9 +57,10 @@ conf_size_list = [4 8 12 16 20];
 
 alg_name_list = {
     'CP'
-    'CP-C'    
-    'Single-DC'
-    'Nearest-DC'
+    'CP-C'
+    'CP-P'
+    'CP-C-1'
+    'CP-P-1'
     };
 
 pos = 0;
@@ -73,19 +74,20 @@ for i = 1:length(conf_size_list)
     data(i, :) = csvread(sprintf('%d_latency_avg.csv', conf_size_list(i)));
 end
 
+offset = 2;
 alg_name_list = {
-    'CP & CP-C'
-    'Single-DC'
-    'Nearest-DC'
+    'CP, CP-CP'    
+    'CP-C-1'
+    'CP-P-1'
     };
 
-plot(data(:, 2), '-o', 'LineWidth', 1, 'MarkerSize', 8);
+plot(data(:, 3), '-o', 'LineWidth', 1, 'MarkerSize', 8);
 hold on;
-plot(data(:, 3), '-x', 'LineWidth', 1, 'MarkerSize', 8);
-plot(data(:, 4), '-^', 'LineWidth', 1, 'MarkerSize', 8);
+plot(data(:, 4), '-x', 'LineWidth', 1, 'MarkerSize', 8);
+plot(data(:, 5), '-^', 'LineWidth', 1, 'MarkerSize', 8);
 
 lh = legend(alg_name_list, 'Orientation', 'vertical', 'Location', 'best');
-set(lh, 'FontSize', 12);
+set(lh, 'FontSize', 10);
 
 xlabel('Conference size (number of parties)', 'FontSize', 14);
 ylabel('Latency (average) [msec]', 'FontSize', 14);
@@ -109,16 +111,16 @@ for i = 1:length(conf_size_list)
     
     hold on;
     for j = 1:length(alg_name_list)
-        p_h = cdfplot(data(j + 1, :));
+        p_h = cdfplot(data(j + offset, :));
         set(p_h, 'LineWidth', 2);
     end
     hold off;
     
     lh = legend(alg_name_list, 'Orientation', 'vertical', 'Location', 'best');
-    set(lh, 'FontSize', 12);
+    set(lh, 'FontSize', 10);
     
     xlabel('Latency [msec]', 'FontSize', 14);
-    ylabel(sprintf('CDF of conferences (%d-party)', conf_size_list(i)), 'FontSize', 14);
+    ylabel(sprintf('CDF of %d-party conferences', conf_size_list(i)), 'FontSize', 14);
     title('');
     
     set(gca, 'fontsize', 12);
