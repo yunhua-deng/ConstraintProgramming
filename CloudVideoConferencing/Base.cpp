@@ -98,7 +98,21 @@ double GetMaxValue(const vector<double> &v)
 	return *max_element(v.begin(), v.end());
 }
 
+int GetMaxValue(const vector<int> &v)
+{
+	if (v.empty()) return 0;
+
+	return *max_element(v.begin(), v.end());
+}
+
 double GetMinValue(const vector<double> &v)
+{
+	if (v.empty()) return 0;
+
+	return *min_element(v.begin(), v.end());
+}
+
+int GetMinValue(const vector<int> &v)
 {
 	if (v.empty()) return 0;
 

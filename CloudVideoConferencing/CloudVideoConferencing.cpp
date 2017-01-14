@@ -303,12 +303,12 @@ namespace CloudVideoConferencingProblem
 	}
 
 	/* reference: http://stackoverflow.com/questions/15099707/how-to-get-position-of-a-certain-element-in-strings-vector-to-use-it-as-an-inde */
-	int SimulationBase::GetAssignedDcRanking(const Client & the_client, const ID assignedDc)
+	int SimulationBase::GetAssignedDcProximity(const Client & the_client, const ID assignedDc)
 	{
 		int result = int(std::find(the_client.ranked_dc_list.begin(), the_client.ranked_dc_list.end(), assignedDc) - the_client.ranked_dc_list.begin());
 		if (result >= the_client.ranked_dc_list.size()) // not found
 		{			
-			cout << "sth wrong happens in GetAssignedDcRanking()!\n";
+			cout << "sth wrong happens in GetAssignedDcProximity()!\n";
 			cin.get();
 			return -1;
 		}
@@ -316,7 +316,17 @@ namespace CloudVideoConferencingProblem
 		{ 
 			return (result + 1); // we count 1 as the No.1 ranking, not 0
 		}
-	}	
+	}
+
+	int SimulationBase::GetAssignedDcProximityLocal(const Client & the_client, const ID assigned_dc, const set<ID> & selected_dc_subset)
+	{
+		int result = 1;
+		for (const auto dc : selected_dc_subset)
+		{			
+			if (global.client_to_dc_delay_table.at(the_client.id).at(dc) < global.client_to_dc_delay_table.at(the_client.id).at(assigned_dc)) result++;
+		}
+		return result;
+	}
 	
 	/* to generate a session in a purely random manner */
 	vector<ID> SimulationBase::GenerateOneRandomSessionNoRegionControl(const size_t session_size)
@@ -593,7 +603,8 @@ namespace CloudVideoConferencingProblem
 
 	Solution SimulationBase::GetSessionSolutionInfoAfterAssignment(const vector<Client> & session_clients, const vector<ID> & session_assignment)
 	{
-		auto solution = Solution();
+		Solution solution;
+
 		solution.longest_path = GetSessionLongestPathAfterAssignment(session_clients, session_assignment);
 		solution.latency = GetPathLength(solution.longest_path);
 		solution.cost = GetSessionCostAfterAssignment(session_clients, session_assignment);
@@ -601,8 +612,10 @@ namespace CloudVideoConferencingProblem
 		solution.cardinality = (int)assignedDc_set.size();
 		for (size_t i = 0; i < session_clients.size(); i++)
 		{
-			solution.proximity.push_back(GetAssignedDcRanking(session_clients.at(i), session_assignment.at(i)));
-		}
+			solution.proximity.push_back(GetAssignedDcProximity(session_clients.at(i), session_assignment.at(i)));
+			solution.proximityLocal.push_back(GetAssignedDcProximityLocal(session_clients.at(i), session_assignment.at(i), assignedDc_set));
+		}		
+
 		return solution;
 	}
 
@@ -1137,6 +1150,9 @@ namespace CloudVideoConferencingProblem
 				resultContainer.latency_result.at(alg_name).push_back(latency_constraint);
 				resultContainer.cardinality_result.at(alg_name).push_back(solution.cardinality);
 				for (auto it : solution.proximity) { resultContainer.proximity_result.at(alg_name).push_back(it); }
+				for (auto it : solution.proximityLocal) { resultContainer.proximityLocal_result.at(alg_name).push_back(it); }
+				/*resultContainer.proximity_result.at(alg_name).push_back(GetMaxValue(solution.proximity));
+				resultContainer.proximityLocal_result.at(alg_name).push_back(GetMaxValue(solution.proximityLocal));*/
 				/*farthestClientPair_location_dist_CP.at({ global.client.at(solution.longest_path.sender).subregion, global.client.at(solution.longest_path.receiver).subregion })++;
 				farthestClientPair_location_dist_CP.at({ global.client.at(solution.longest_path.receiver).subregion, global.client.at(solution.longest_path.sender).subregion })++;*/
 			}
@@ -1239,6 +1255,8 @@ namespace CloudVideoConferencingProblem
 		ofstream cardinality_CDF_file(this_output_directory + std::to_string(sim_setting.session_size) + "_" + "cardinality_CDF.csv");
 		ofstream proximity_avg_file(this_output_directory + std::to_string(sim_setting.session_size) + "_" + "proximity_avg.csv");		
 		ofstream proximity_CDF_file(this_output_directory + std::to_string(sim_setting.session_size) + "_" + "proximity_CDF.csv");
+		ofstream proximityLocal_avg_file(this_output_directory + std::to_string(sim_setting.session_size) + "_" + "proximityLocal_avg.csv");
+		ofstream proximityLocal_CDF_file(this_output_directory + std::to_string(sim_setting.session_size) + "_" + "proximityLocal_CDF.csv");
 		
 		// time_avg
 		string buffer = "";
@@ -1308,6 +1326,15 @@ namespace CloudVideoConferencingProblem
 		buffer.pop_back();
 		proximity_avg_file << buffer;
 
+		// proximityLocal_avg
+		buffer = "";
+		for (auto algName : alg_name_list)
+		{
+			buffer += std::to_string(GetMeanValue(resultContainer.proximityLocal_result.at(algName))) + ",";
+		}
+		buffer.pop_back();
+		proximityLocal_avg_file << buffer;
+
 		// cardinality_CDF
 		buffer = "";
 		for (auto algName : alg_name_list)
@@ -1333,6 +1360,19 @@ namespace CloudVideoConferencingProblem
 			buffer.push_back('\n');
 		}
 		proximity_CDF_file << buffer;
+
+		// proximityLocal_CDF
+		buffer = "";
+		for (auto algName : alg_name_list)
+		{
+			for (auto it : resultContainer.proximityLocal_result.at(algName))
+			{
+				buffer += std::to_string((int)it) + ",";
+			}
+			buffer.pop_back();
+			buffer.push_back('\n');
+		}
+		proximityLocal_CDF_file << buffer;
 
 		/*ofstream allClientPair_location_dist_file(this_output_directory + std::to_string(sim_setting.session_size) + "_" + "allClientPair_location_dist.csv");
 		DumpLabeledMatrixToDisk(allClientPairs_location_dist, global.dc_name_list, this_output_directory + std::to_string(sim_setting.session_size) + "_" + "allClientPair_location_dist.csv");*/

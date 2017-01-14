@@ -5,8 +5,8 @@ set(gcf, 'Position', [ss(1) ss(2) ss(3) ss(4)/3]);
 conf_size_list = [4 8 12 16 20];
 
 alg_name_list = {
-    'CP'
-    'CP-C'
+    'CP-Proximity'
+    'CP-Cardinality'
     'Single-DC'
     'Nearest-DC'
     };
@@ -26,7 +26,7 @@ metric_name_list = {
 y_label_list = {
     'Cardinality (average)'
     'Proximity (average)'
-    'Comp. Time (slowest) [msec]'
+    'Time (slowest) [msec]'
     };
 
 data = zeros(length(conf_size_list), length(alg_name_list));

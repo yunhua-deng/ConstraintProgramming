@@ -103,7 +103,8 @@ namespace CloudVideoConferencingProblem
 		double latency; // the bound of the interaction latency of between any client pair
 		double cost; // the total traffic cost
 		int cardinality; // the number of selected datacenters
-		vector<int> proximity;
+		vector<int> proximity; // record all of the session		
+		vector<int> proximityLocal; // with respect to the selected datacenters only		
 	};
 
 	struct Result
@@ -113,6 +114,7 @@ namespace CloudVideoConferencingProblem
 		map<string, vector<double>> cost_result;
 		map<string, vector<double>> cardinality_result;		
 		map<string, vector<double>> proximity_result;
+		map<string, vector<double>> proximityLocal_result;
 		map<string, map<pair<string, string>, int>> farthestClientPair_dist_result;
 
 		Result(const vector<string> algName_list)
@@ -124,6 +126,7 @@ namespace CloudVideoConferencingProblem
 				cost_result.insert({ algName, vector<double>() });
 				cardinality_result.insert({ algName, vector<double>() });
 				proximity_result.insert({ algName, vector<double>() });
+				proximityLocal_result.insert({ algName, vector<double>() });
 				farthestClientPair_dist_result.insert({ algName, map<pair<string, string>, int>() });
 			}
 		}
@@ -136,7 +139,8 @@ namespace CloudVideoConferencingProblem
 		bool isInitialized = false;
 		Global global;		
 		void RankDcByProximity4Client(Client&, const vector<ID>&);
-		int GetAssignedDcRanking(const Client&, const ID);		
+		int GetAssignedDcProximity(const Client&, const ID);
+		int GetAssignedDcProximityLocal(const Client&, const ID, const set<ID> &);
 						
 		double GetPathLength(const Path&);
 		Path GetShortestPathOfClientPair(const Client &, const Client &, const vector<ID> &);				

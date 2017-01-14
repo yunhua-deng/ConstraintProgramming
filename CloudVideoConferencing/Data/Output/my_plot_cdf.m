@@ -74,7 +74,7 @@ for i = 1:length(conf_size_list)
 end
 
 alg_name_list = {
-    'CP & CP-C'
+    'CP'
     'Single-DC'
     'Nearest-DC'
     };
