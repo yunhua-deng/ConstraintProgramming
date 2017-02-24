@@ -117,6 +117,22 @@ using namespace CloudVideoConferencingProblem;
 argv[]: array of command-line argument strings (start from 1 because 0 is the function name)*/
 int main(int argc, char *argv[])
 {	
+	/***************DatasetAnalysis***************/
+	auto da = DatasetAnalysis();
+	/*da.Check_InterDcNetwork_Advantage();
+	da.Get_ClientCluster_Info();
+	da.Get_DelayToNearestDc_CDF();
+	da.Get_ShortestPathLength_CDF();*/
+
+	/***************MultilevelOptimization (single-thread)****************/
+	for (size_t session_size = 4; session_size <= 20; session_size += 4) // for (size_t session_size : {15, 20, 25})
+	{
+		auto startTime = clock();
+		RunSimulation_MultilevelOptimization(Setting(session_size));
+		cout << "session size: " << session_size << " => " << "total running time: " << difftime(clock(), startTime) / 1000 << " seconds\n";
+	}
+
+	/***************MultilevelOptimization (multi-threading)****************/	
 	/*vector<thread> workers;
 	for (size_t session_size = 4; session_size <= 10; session_size += 2)
 	{
@@ -124,13 +140,6 @@ int main(int argc, char *argv[])
 		workers.push_back(thread(RunSimulation_MultilevelOptimization, Setting(session_size, 300, true)));
 	}
 	std::for_each(workers.begin(), workers.end(), [](thread &t) { t.join(); });*/
-
-	for (size_t session_size = 4; session_size <= 20; session_size += 4) // for (size_t session_size : {15, 20, 25})
-	{
-		auto startTime = clock();
-		RunSimulation_MultilevelOptimization(Setting(session_size));
-		cout << "session size: " << session_size << " => " << "total running time: " << difftime(clock(), startTime) / 1000 << " seconds\n";
-	}
 
 	return 0;
 }

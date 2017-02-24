@@ -104,7 +104,9 @@ namespace CloudVideoConferencingProblem
 		double cost; // the total traffic cost
 		int cardinality; // the number of selected datacenters
 		vector<int> proximity; // record all of the session		
-		vector<int> proximityLocal; // with respect to the selected datacenters only		
+		double ratioNearest; // the ratio of clients that are assigned to their (gloablly) nearest datacenters
+		vector<int> proximityLocal; // with respect to the selected datacenters only
+		double ratioNearestLocal; // the ratio of clients that are assigned to their locally nearest datacenters
 	};
 
 	struct Result
@@ -114,7 +116,9 @@ namespace CloudVideoConferencingProblem
 		map<string, vector<double>> cost_result;
 		map<string, vector<double>> cardinality_result;		
 		map<string, vector<double>> proximity_result;
+		map<string, vector<double>> ratioNearest_result;
 		map<string, vector<double>> proximityLocal_result;
+		map<string, vector<double>> ratioNearestLocal_result;
 		map<string, map<pair<string, string>, int>> farthestClientPair_dist_result;
 
 		Result(const vector<string> algName_list)
@@ -126,7 +130,9 @@ namespace CloudVideoConferencingProblem
 				cost_result.insert({ algName, vector<double>() });
 				cardinality_result.insert({ algName, vector<double>() });
 				proximity_result.insert({ algName, vector<double>() });
+				ratioNearest_result.insert({ algName, vector<double>() });
 				proximityLocal_result.insert({ algName, vector<double>() });
+				ratioNearestLocal_result.insert({ algName, vector<double>() });
 				farthestClientPair_dist_result.insert({ algName, map<pair<string, string>, int>() });
 			}
 		}
@@ -195,7 +201,7 @@ namespace CloudVideoConferencingProblem
 		void Check_InterDcNetwork_Advantage();
 		void Get_DelayToNearestDc_CDF();
 		void Get_ShortestPathLength_CDF();
-	};	
+	};
 
 	class MultilevelOptimization : public SimulationBase
 	{

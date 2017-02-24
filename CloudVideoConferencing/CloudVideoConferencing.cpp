@@ -44,8 +44,21 @@ namespace CloudVideoConferencingProblem
 		/*make it empty*/		
 		global = Global();
 		
+		/*dc_to_dc_delay_table, dc_name_list*/
+		auto strings_read = ReadDelimitedTextFileIntoVector(global.data_directory + "ping_to_dc" + "_p50_" + "matrix_month.csv", ',', true);
+		for (auto row : strings_read)
+		{
+			global.dc_name_list.push_back(row.at(0));
+			vector<double> dc_to_dc_delay_table_row;
+			for (auto col = 1; col < row.size(); col++)
+			{
+				dc_to_dc_delay_table_row.push_back((1 - global.dc_to_dc_latency_discount) * stod(row.at(col)) / 2); // one-way delay = rtt / 2, and considering discount
+			}
+			global.dc_to_dc_delay_table.push_back(dc_to_dc_delay_table_row);
+		}
+		
 		/*client_to_dc_delay_table, client_name_list*/
-		auto strings_read = ReadDelimitedTextFileIntoVector(global.data_directory + "ping_to_prefix_median_matrix.csv", ',', true);
+		strings_read = ReadDelimitedTextFileIntoVector(global.data_directory + "ping_to_prefix" + "_p50_" + "matrix_month.csv", ',', true);
 		for (auto row : strings_read)
 		{
 			global.client_name_list.push_back(row.at(0));
@@ -55,25 +68,13 @@ namespace CloudVideoConferencingProblem
 				client_to_dc_delay_table_row.push_back(stod(row.at(col)) / 2); // one-way delay = rtt / 2
 			}
 			global.client_to_dc_delay_table.push_back(client_to_dc_delay_table_row);
-		}
-
-		/*dc_to_dc_delay_table, dc_name_list*/
-		strings_read = ReadDelimitedTextFileIntoVector(global.data_directory + "ping_to_dc_median_matrix.csv", ',', true);
-		for (auto row : strings_read)
-		{
-			global.dc_name_list.push_back(row.at(0));
-			vector<double> dc_to_dc_delay_table_row;
-			for (auto col = 1; col < row.size(); col++)
-			{				
-				dc_to_dc_delay_table_row.push_back((1 - global.dc_to_dc_latency_discount) * stod(row.at(col)) / 2); // one-way delay = rtt / 2, and considering discount
-			}
-			global.dc_to_dc_delay_table.push_back(dc_to_dc_delay_table_row);
-		}
+		}		
 
 		/*dc_internal_bandwidth_price_list, dc_external_bandwidth_price_list, dc_server_rental_price_list*/
+		/*latest update: as we don't consider any specific pricing model, we let all items of the pricing file be 0*/
 		strings_read = ReadDelimitedTextFileIntoVector(global.data_directory + "pricing_bandwidth_server.csv", ',', true);
 		for (auto row : strings_read)
-		{
+		{			
 			global.dc_internal_bandwidth_price_list.push_back(stod(row.at(1)));
 			global.dc_external_bandwidth_price_list.push_back(stod(row.at(2)));
 			global.dc_server_rental_price_list.push_back(stod(row.at(3)));
@@ -90,7 +91,6 @@ namespace CloudVideoConferencingProblem
 			d.provider = d.name.substr(0, d.name.find_first_of("-")); // e.g. "ec2"
 			d.server_rental_price = global.dc_server_rental_price_list.at(i);
 			d.external_bandwidth_price = global.dc_external_bandwidth_price_list.at(i);
-			d.internal_bandwidth_price = global.dc_internal_bandwidth_price_list.at(i);
 			d.internal_bandwidth_price = global.dc_internal_bandwidth_price_list.at(i);
 
 			global.datacenter[d.id] = d;
@@ -123,7 +123,8 @@ namespace CloudVideoConferencingProblem
 			/*get region (e.g. "ap")*/
 			auto pos = global.datacenter.at(c.nearest_dc).name.find_first_of("-");
 			c.region = global.datacenter.at(c.nearest_dc).name.substr(pos + 1, 2); // e.g. extract "ap" from "ec2-ap-northeast-1"
-			
+			if ("ca" == c.region || "us" == c.region) c.region = "na";
+
 			/*record this client after finishing updating the client's properties*/
 			global.client[c.id] = c; // client's id as the key for the client
 			global.client_id_list.push_back(c.id);
@@ -229,9 +230,8 @@ namespace CloudVideoConferencingProblem
 		
 		string buffer = "";
 		for (const auto & it : global.client)
-		{
-			buffer += std::to_string((int)global.client_to_dc_delay_table.at(it.second.id).at(it.second.nearest_dc));
-			buffer += "\n";
+		{			
+			buffer += std::to_string((int)global.client_to_dc_delay_table.at(it.second.id).at(it.second.nearest_dc)) + " ";
 		}
 		ofstream data_file(global.output_directory + "CDF_DelayToNearestDC.txt");
 		data_file << buffer;
@@ -250,8 +250,8 @@ namespace CloudVideoConferencingProblem
 			{
 				if (j != i)
 				{
-					buffer += std::to_string((int)GetPathLength(GetShortestPathOfClientPair(global.client.at(i), global.client.at(j), global.dc_id_list)));
-					buffer += "\n";
+					if (rand() % 10 == 0) // reduce the size of the output file
+						buffer += std::to_string((int)GetPathLength(GetShortestPathOfClientPair(global.client.at(i), global.client.at(j), global.dc_id_list))) + " ";
 				}
 			}
 		}
@@ -610,11 +610,18 @@ namespace CloudVideoConferencingProblem
 		solution.cost = GetSessionCostAfterAssignment(session_clients, session_assignment);
 		set<ID> assignedDc_set(session_assignment.begin(), session_assignment.end());
 		solution.cardinality = (int)assignedDc_set.size();
+		
+		solution.ratioNearest = 0;
+		solution.ratioNearestLocal = 0;
 		for (size_t i = 0; i < session_clients.size(); i++)
 		{
 			solution.proximity.push_back(GetAssignedDcProximity(session_clients.at(i), session_assignment.at(i)));
+			if (1 == solution.proximity.back()) { solution.ratioNearest++; }
 			solution.proximityLocal.push_back(GetAssignedDcProximityLocal(session_clients.at(i), session_assignment.at(i), assignedDc_set));
-		}		
+			if (1 == solution.proximityLocal.back()) { solution.ratioNearestLocal++; }
+		}
+		solution.ratioNearest = solution.ratioNearest / session_clients.size();
+		solution.ratioNearestLocal = solution.ratioNearestLocal / session_clients.size();
 
 		return solution;
 	}
@@ -1150,9 +1157,11 @@ namespace CloudVideoConferencingProblem
 				resultContainer.latency_result.at(alg_name).push_back(latency_constraint);
 				resultContainer.cardinality_result.at(alg_name).push_back(solution.cardinality);
 				for (auto it : solution.proximity) { resultContainer.proximity_result.at(alg_name).push_back(it); }
-				for (auto it : solution.proximityLocal) { resultContainer.proximityLocal_result.at(alg_name).push_back(it); }
+				for (auto it : solution.proximityLocal) { resultContainer.proximityLocal_result.at(alg_name).push_back(it); }				
 				/*resultContainer.proximity_result.at(alg_name).push_back(GetMaxValue(solution.proximity));
 				resultContainer.proximityLocal_result.at(alg_name).push_back(GetMaxValue(solution.proximityLocal));*/
+				resultContainer.ratioNearest_result.at(alg_name).push_back(solution.ratioNearest);
+				resultContainer.ratioNearestLocal_result.at(alg_name).push_back(solution.ratioNearestLocal);
 				/*farthestClientPair_location_dist_CP.at({ global.client.at(solution.longest_path.sender).subregion, global.client.at(solution.longest_path.receiver).subregion })++;
 				farthestClientPair_location_dist_CP.at({ global.client.at(solution.longest_path.receiver).subregion, global.client.at(solution.longest_path.sender).subregion })++;*/
 			}
@@ -1252,11 +1261,15 @@ namespace CloudVideoConferencingProblem
 		ofstream latency_max_file(this_output_directory + std::to_string(sim_setting.session_size) + "_" + "latency_max.csv");
 		ofstream latency_CDF_file(this_output_directory + std::to_string(sim_setting.session_size) + "_" + "latency_CDF.csv");
 		ofstream cardinality_avg_file(this_output_directory + std::to_string(sim_setting.session_size) + "_" + "cardinality_avg.csv");
-		ofstream cardinality_CDF_file(this_output_directory + std::to_string(sim_setting.session_size) + "_" + "cardinality_CDF.csv");
+		ofstream cardinality_CDF_file(this_output_directory + std::to_string(sim_setting.session_size) + "_" + "cardinality_CDF.csv");		
 		ofstream proximity_avg_file(this_output_directory + std::to_string(sim_setting.session_size) + "_" + "proximity_avg.csv");		
 		ofstream proximity_CDF_file(this_output_directory + std::to_string(sim_setting.session_size) + "_" + "proximity_CDF.csv");
+		ofstream ratioNearest_avg_file(this_output_directory + std::to_string(sim_setting.session_size) + "_" + "ratioNearest_avg.csv");
+		ofstream ratioNearest_CDF_file(this_output_directory + std::to_string(sim_setting.session_size) + "_" + "ratioNearest_CDF.csv");
 		ofstream proximityLocal_avg_file(this_output_directory + std::to_string(sim_setting.session_size) + "_" + "proximityLocal_avg.csv");
 		ofstream proximityLocal_CDF_file(this_output_directory + std::to_string(sim_setting.session_size) + "_" + "proximityLocal_CDF.csv");
+		ofstream ratioNearestLocal_avg_file(this_output_directory + std::to_string(sim_setting.session_size) + "_" + "ratioNearestLocal_avg.csv");
+		ofstream ratioNearestLocal_CDF_file(this_output_directory + std::to_string(sim_setting.session_size) + "_" + "ratioNearestLocal_CDF.csv");
 		
 		// time_avg
 		string buffer = "";
@@ -1326,6 +1339,15 @@ namespace CloudVideoConferencingProblem
 		buffer.pop_back();
 		proximity_avg_file << buffer;
 
+		// ratioNearest_avg
+		buffer = "";
+		for (auto algName : alg_name_list)
+		{
+			buffer += std::to_string(GetMeanValue(resultContainer.ratioNearest_result.at(algName))) + ",";
+		}
+		buffer.pop_back();
+		ratioNearest_avg_file << buffer;
+
 		// proximityLocal_avg
 		buffer = "";
 		for (auto algName : alg_name_list)
@@ -1334,6 +1356,15 @@ namespace CloudVideoConferencingProblem
 		}
 		buffer.pop_back();
 		proximityLocal_avg_file << buffer;
+
+		// ratioNearestLocal_avg
+		buffer = "";
+		for (auto algName : alg_name_list)
+		{
+			buffer += std::to_string(GetMeanValue(resultContainer.ratioNearestLocal_result.at(algName))) + ",";
+		}
+		buffer.pop_back();
+		ratioNearestLocal_avg_file << buffer;
 
 		// cardinality_CDF
 		buffer = "";
@@ -1360,6 +1391,19 @@ namespace CloudVideoConferencingProblem
 			buffer.push_back('\n');
 		}
 		proximity_CDF_file << buffer;
+		
+		// ratioNearest_CDF
+		buffer = "";
+		for (auto algName : alg_name_list)
+		{
+			for (auto it : resultContainer.ratioNearest_result.at(algName))
+			{
+				buffer += std::to_string((int)it) + ",";
+			}
+			buffer.pop_back();
+			buffer.push_back('\n');
+		}
+		ratioNearest_CDF_file << buffer;
 
 		// proximityLocal_CDF
 		buffer = "";
@@ -1373,6 +1417,19 @@ namespace CloudVideoConferencingProblem
 			buffer.push_back('\n');
 		}
 		proximityLocal_CDF_file << buffer;
+		
+		// ratioNearestLocal_CDF
+		buffer = "";
+		for (auto algName : alg_name_list)
+		{
+			for (auto it : resultContainer.ratioNearestLocal_result.at(algName))
+			{
+				buffer += std::to_string((int)it) + ",";
+			}
+			buffer.pop_back();
+			buffer.push_back('\n');
+		}
+		ratioNearestLocal_CDF_file << buffer;		
 
 		/*ofstream allClientPair_location_dist_file(this_output_directory + std::to_string(sim_setting.session_size) + "_" + "allClientPair_location_dist.csv");
 		DumpLabeledMatrixToDisk(allClientPairs_location_dist, global.dc_name_list, this_output_directory + std::to_string(sim_setting.session_size) + "_" + "allClientPair_location_dist.csv");*/

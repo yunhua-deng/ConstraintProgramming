@@ -9,20 +9,18 @@ import csv
 import matplotlib
 import matplotlib.pyplot as plt
 
-csv_file_name_list = ['ping_to_pl_median_matrix', \
-'ping_to_prefix_median_matrix', \
-'ping_to_dc_median_matrix']
+csv_file_name_list = ['ping_to_prefix_p50_matrix_month', \
+'ping_to_dc_p50_matrix_month']
 
-fig_title_list = ['Distribution of the latency (RTT) from each datacenter to 150+ PlanetLab nodes', \
-'Distribution of the latency (RTT) from each datacenter to 15K+ IP prefixes', \
-'Distribution of the latency (RTT) from each datacenter to other 10 datacenters']
+fig_title_list = ['Distribution of the latency (RTT) from each datacenter to 23K+ IP prefixes', \
+'Distribution of the latency (RTT) from each datacenter to other datacenters']
 
 skip_zero_option_list = [False, False, True]
 
-matplotlib.rc('xtick', labelsize=16)
-matplotlib.rc('ytick', labelsize=16)
+matplotlib.rc('xtick', labelsize=20)
+matplotlib.rc('ytick', labelsize=20)
 
-fig, axes = plt.subplots(nrows=3, ncols=1, figsize=(20, 25))
+fig, axes = plt.subplots(nrows=2, ncols=1, figsize=(30, 20))
 
 subfig_counter = 0
 
@@ -41,9 +39,9 @@ for csv_file_name, fig_title, skip_zero_option in zip(csv_file_name_list, fig_ti
         plt.sca(axes[subfig_counter])
         plt.xticks(rotation=15)
         axes[subfig_counter].boxplot(all_data, labels=dc_list, showmeans=True)
-        axes[subfig_counter].set_ylabel('Latency (RTT) in msec', fontsize=20)
-        axes[subfig_counter].set_xlabel('Datacenter', fontsize=20)
-        axes[subfig_counter].set_title(fig_title, fontsize=20, y=1.02)
+        axes[subfig_counter].set_ylabel('Latency RTT (msec)', fontsize=24)
+        axes[subfig_counter].set_xlabel('Datacenter', fontsize=24)
+        axes[subfig_counter].set_title(fig_title, fontsize=24, y=1.02)
         axes[subfig_counter].yaxis.grid(True)
         subfig_counter += 1
 plt.subplots_adjust(hspace=0.4)

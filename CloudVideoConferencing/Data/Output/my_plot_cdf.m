@@ -23,28 +23,28 @@ export_fig CDF_DelayToDC_90thOver50th.pdf -transparent
 
 %% CDF_DelayToNearestDC
 ss = get(0, 'ScreenSize');
-set(gcf, 'Position', [ss(1) ss(2) ss(3)/3 ss(4)/3]);
+set(gcf, 'Position', [ss(1) ss(2) ss(3)/2.5 ss(4)/2.5]);
 %data = importdata('CDF_DelayToNearestDC.txt'); % importdata() is memory-intensive
 data = dlmread('CDF_DelayToNearestDC.txt');
 p_h = cdfplot(data);
 set(gca, 'fontsize', 10);
 %set(gca, 'XTick', [0 30 60 90 120 150]);
 set(p_h, 'LineStyle', '-', 'LineWidth', 2, 'Color', 'b');
-xlabel('Latency to closest EC2 datacenter (msec)', 'FontSize', 14);
-ylabel('Cumulative fraction of prefixes', 'FontSize', 14);
+xlabel('Latency to closest EC2 datacenter (msec)', 'FontSize', 12);
+ylabel('Cumulative fraction of prefixes', 'FontSize', 12);
 title('');
 grid on;
 export_fig CDF_DelayToNearestDC.pdf -transparent
 
 %% CDF_ShortestPathLength
 ss = get(0, 'ScreenSize');
-set(gcf, 'Position', [ss(1) ss(2) ss(3)/3 ss(4)/3]);
+set(gcf, 'Position', [ss(1) ss(2) ss(3)/2.5 ss(4)/2.5]);
 data = dlmread('CDF_ShortestPathLength.txt');
 p_h = cdfplot(data);
 set(gca, 'fontsize', 10);
 set(p_h, 'LineStyle', '-', 'LineWidth', 2, 'Color', 'b');
-xlabel('Latency of shortest path (msec)', 'FontSize', 14);
-ylabel('Cumulative fraction of prefix pairs', 'FontSize', 14);
+xlabel('Latency of shortest path (msec)', 'FontSize', 12);
+ylabel('Cumulative fraction of prefix pairs', 'FontSize', 12);
 title('');
 grid on;
 export_fig CDF_ShortestPathLength.pdf -transparent

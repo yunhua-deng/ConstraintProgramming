@@ -1,1 +1,0 @@
-COPY /Y "..\x64\Release\CloudVideoConferencing.exe" "CloudVideoConferencing.exe"

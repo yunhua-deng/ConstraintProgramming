@@ -29,7 +29,7 @@ alg_name_list = {
 
 plot(data(:, 2), '-o', 'LineWidth', 1);
 hold on;
-plot(data(:, 3), '-x', 'LineWidth', 1);
+plot(data(:, 3), '-*', 'LineWidth', 1);
 plot(data(:, 4), '-^', 'LineWidth', 1);
 
 lh = legend(alg_name_list, 'Orientation', 'vertical', 'Location', 'best');
@@ -87,21 +87,25 @@ alg_name_list = {
 
 line_marker_list = {    
     '-o'
-    '-*'    
-    '-x'
+    '-p'    
+    '-*'
     '-^'};
 
 metric_name_list = {
     'cardinality'
-    'proximity'
-    'proximityLocal'
+    %'proximity'    
+    %'proximityLocal'
+    'ratioNearest'
+    'ratioNearestLocal'
     %'time'
     };
 
 y_label_list = {
-    'Cardinality'
-    'Proximity (global)'
-    'Proximity (local)'
+    'Cardinality'    
+    'Ratio of Nearest (global)'
+    'Ratio of Nearest (local)'
+    %'Proximity (global)'
+    %'Proximity (local)'
     %'Time (slowest) [msec]'
     };
 
@@ -139,7 +143,7 @@ for metric_index = 1:length(metric_name_list)
     end
     
     set(gca, 'fontsize', 10);
-    set(gca, 'XLim', [1-0.1 length(conf_size_list)+0.1]);
+    set(gca, 'XLim', [1-0.05 length(conf_size_list)+0.05]);
     set(gca, 'XTick', 1:length(conf_size_list));
     set(gca, 'XTickLabel', conf_size_list);
     
